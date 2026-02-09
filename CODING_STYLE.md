@@ -261,10 +261,8 @@ Use Javadoc-style `/** */` for documenting functions, classes, and public interf
 ```cpp
 /**
  * Processes a file using a combination of techniques.
- * 
  * If validation is enabled, performs additional checks before processing.
  * Otherwise, applies standard processing with the specified quality level.
- * 
  * @param sourcePath Path to the source file.
  * @param targetPath Path where the processed file will be saved.
  * @param validate Whether to perform validation checks.

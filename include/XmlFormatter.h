@@ -68,7 +68,6 @@ namespace QuickXml
 		/**
 		 * Adds a custom string into output stream. The string can be added several times by
 		 * specifying the num parameter.
-		 * 
 		 * @param str The string to add.
 		 * @param num The number of times the str should be added.
 		 */
@@ -76,7 +75,6 @@ namespace QuickXml
 
 		/**
 		 * Change the current indentLevel. The function maintains the level in limits [0 .. params.maxIndentLevel].
-		 * 
 		 * @param change The direction of change. Value +1 increase the indent level; value -1 decrease the indent level.
 		 */
 		void updateIndentLevel(int change);
@@ -84,7 +82,6 @@ namespace QuickXml
 	public:
 		/**
 		 * Constructor.
-		 * 
 		 * @param data The source data.
 		 * @param length The source data length.
 		 */
@@ -92,7 +89,6 @@ namespace QuickXml
 
 		/**
 		 * Constructor.
-		 * 
 		 * @param data The source data.
 		 * @param length The source data length.
 		 * @param params The formatter params.
@@ -106,7 +102,6 @@ namespace QuickXml
 
 		/**
 		 * Initialize the formatter with input data.
-		 * 
 		 * @param data The source data.
 		 * @param length The source data length.
 		 */
@@ -114,7 +109,6 @@ namespace QuickXml
 
 		/**
 		 * Initialize the formatter with input data.
-		 * 
 		 * @param data The source data.
 		 * @param length The source data length.
 		 * @param params The formatter params.
@@ -129,7 +123,6 @@ namespace QuickXml
 		/**
 		 * Generates a string containing a list of recognized tokens.
 		 * This method has no other goal that help for debug.
-		 * 
 		 * @param separator The tokens names separator (default is '/').
 		 * @param detailed Indicates that output should include data.
 		 * @return A string-representation of all data tokens.
@@ -138,21 +131,18 @@ namespace QuickXml
 
 		/**
 		 * Performs linearize formatting.
-		 * 
 		 * @return A reference string stream containing the formatted string.
 		 */
 		std::stringstream* linearize();
 
 		/**
 		 * Performs pretty print formatting.
-		 * 
 		 * @return A reference string stream containing the formatted string.
 		 */
 		std::stringstream* prettyPrint();
 
 		/**
 		 * Construct the path of given position.
-		 * 
 		 * @param position The reference position to construct path for.
 		 * @param xpathMode The xpath extraction mode.
 		 * @return The constructed path.
@@ -161,7 +151,6 @@ namespace QuickXml
 
 		/**
 		 * Construct a default formatter parameters object.
-		 * 
 		 * @return A default parameters set for formatter.
 		 */
 		static XmlFormatterParamsType getDefaultParams();
