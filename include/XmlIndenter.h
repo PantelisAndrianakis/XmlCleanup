@@ -1,8 +1,9 @@
 #pragma once
 
-#include <string>
 #include <memory>
 #include <sstream>
+#include <string>
+
 #include "XmlFormatter.h"
 
 // XmlIndenter: A wrapper class for different XML formatting engines.
@@ -25,7 +26,7 @@ public:
 	// Constructor with custom settings.
 	XmlIndenter(const std::string& xmlContent, const std::string& indentStr = "\t", const std::string& eolStr = "\n", bool indentOnly = true, bool autoCloseEmptyElements = true);
 
-	// Destructor
+	// Destructor.
 	~XmlIndenter();
 
 	// Indent XML content using QuickXml formatter.

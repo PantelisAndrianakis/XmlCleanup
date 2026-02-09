@@ -1,10 +1,11 @@
-#include <iostream>
-#include <fstream>
-#include <string>
-#include <sstream>
-#include <vector>
-#include <filesystem>
 #include "XmlIndenter.h"
+
+#include <filesystem>
+#include <fstream>
+#include <iostream>
+#include <sstream>
+#include <string>
+#include <vector>
 
 // Function to find all XML and XSD files in a directory and its subdirectories.
 std::vector<std::filesystem::path> findXmlAndXsdFiles(const std::filesystem::path& directoryPath)

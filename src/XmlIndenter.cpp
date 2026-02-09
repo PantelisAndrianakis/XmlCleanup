@@ -1,4 +1,5 @@
 #include "XmlIndenter.h"
+
 #include "XmlFormatter.h"
 
 // Constructor with default settings.
@@ -11,7 +12,7 @@ XmlIndenter::XmlIndenter(const std::string& xmlContent, const std::string& inden
 {
 }
 
-// Destructor
+// Destructor.
 XmlIndenter::~XmlIndenter()
 {
 }
@@ -69,7 +70,6 @@ std::string normalizeLineEndings(const std::string& content)
 	return finalResult;
 }
 
-// Helper function to format single-line XML comments with proper spacing.
 /**
  * Formats single-line XML comments to ensure consistent spacing.
  * Adds one space after <!-- and one space before --> for better readability.
@@ -80,7 +80,7 @@ std::string formatSingleLineComments(const std::string& xml)
 {
 	std::string result = xml;
 	size_t pos = 0;
-	
+
 	while ((pos = result.find("<!--", pos)) != std::string::npos)
 	{
 		// Find the end of this comment.
@@ -91,18 +91,18 @@ std::string formatSingleLineComments(const std::string& xml)
 			pos += 4;
 			continue;
 		}
-		
+
 		// Check if this is a single-line comment (no newlines between start and end).
 		std::string commentText = result.substr(pos, endPos - pos + 3);
 		if (commentText.find('\n') == std::string::npos && commentText.find('\r') == std::string::npos)
 		{
 			// Extract the comment content (between <!-- and -->).
 			std::string commentContent = result.substr(pos + 4, endPos - (pos + 4));
-			
-			// Trim leading and trailing spaces
+
+			// Trim leading and trailing spaces.
 			size_t startTrim = commentContent.find_first_not_of(' ');
 			size_t endTrim = commentContent.find_last_not_of(' ');
-			
+
 			if (startTrim != std::string::npos && endTrim != std::string::npos)
 			{
 				commentContent = commentContent.substr(startTrim, endTrim - startTrim + 1);
@@ -119,12 +119,12 @@ std::string formatSingleLineComments(const std::string& xml)
 			{
 				commentContent = ""; // Comment was all spaces.
 			}
-			
+
 			// Normalize multiple spaces to single space within the comment content.
 			std::string normalizedContent;
 			normalizedContent.reserve(commentContent.length());
 			bool lastWasSpace = false;
-			
+
 			for (char c : commentContent)
 			{
 				if (c == ' ')
@@ -141,7 +141,7 @@ std::string formatSingleLineComments(const std::string& xml)
 					lastWasSpace = false;
 				}
 			}
-			
+
 			// Replace the original comment with the normalized one.
 			std::string newComment;
 			if (normalizedContent.empty())
@@ -154,7 +154,7 @@ std::string formatSingleLineComments(const std::string& xml)
 				newComment = "<!-- " + normalizedContent + " -->";
 			}
 			result.replace(pos, endPos - pos + 3, newComment);
-			
+
 			// Adjust position based on the new comment length.
 			pos += newComment.length();
 		}
@@ -164,7 +164,7 @@ std::string formatSingleLineComments(const std::string& xml)
 			pos = endPos + 3;
 		}
 	}
-	
+
 	return result;
 }
 

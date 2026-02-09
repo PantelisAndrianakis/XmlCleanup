@@ -1,22 +1,25 @@
-#include <algorithm>
 #include "XmlFormatter.h"
+
+#include <algorithm>
 
 namespace QuickXml
 {
 	static inline void ltrim(std::string& s)
 	{
 		s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](unsigned char ch)
-			{
-				return (ch != ' ' && ch != '\t' && ch != '\r' && ch != '\n');
-			}));
+		{
+			return (ch != ' ' && ch != '\t' && ch != '\r' && ch != '\n');
+		}));
 	}
+
 	static inline void rtrim(std::string& s)
 	{
 		s.erase(std::find_if(s.rbegin(), s.rend(), [](unsigned char ch)
-			{
-				return (ch != ' ' && ch != '\t' && ch != '\r' && ch != '\n');
-			}).base(), s.end());
+		{
+			return (ch != ' ' && ch != '\t' && ch != '\r' && ch != '\n');
+		}).base(), s.end());
 	}
+
 	static inline void trim(std::string& s)
 	{
 		ltrim(s);
@@ -26,17 +29,19 @@ namespace QuickXml
 	static inline void ltrim_s(std::string& s)
 	{
 		s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](unsigned char ch)
-			{
-				return (ch != ' ' && ch != '\t');
-			}));
+		{
+			return (ch != ' ' && ch != '\t');
+		}));
 	}
+
 	static inline void rtrim_s(std::string& s)
 	{
 		s.erase(std::find_if(s.rbegin(), s.rend(), [](unsigned char ch)
-			{
-				return (ch != ' ' && ch != '\t');
-			}).base(), s.end());
+		{
+			return (ch != ' ' && ch != '\t');
+		}).base(), s.end());
 	}
+
 	static inline void trim_s(std::string& s)
 	{
 		ltrim_s(s);
@@ -140,7 +145,7 @@ namespace QuickXml
 			}
 		}
 
-		// Return result after having removed the firt '/'.
+		// Return result after having removed the first '/'.
 		return out.str().erase(0, separator.length());
 	}
 
@@ -157,121 +162,115 @@ namespace QuickXml
 		{
 			switch (token.type)
 			{
-			case XmlTokenType::LineBreak:
-			{
-				break;
-			}
-			case XmlTokenType::Whitespace:
-			{
-				if (this->params.applySpacePreserve && this->parser->isSpacePreserve())
-				{
-					lastAppliedTokenType = XmlTokenType::Whitespace;
-					this->out.write(token.chars, token.size);
-				}
-				else if (token.context.inOpeningTag)
-				{
-					lastAppliedTokenType = XmlTokenType::Whitespace;
-					this->out << " ";
-				}
-				break;
-			}
-			case XmlTokenType::Text:
-			{
-				if (this->params.applySpacePreserve && this->parser->isSpacePreserve())
-				{
-					// Whitespace only text nodes must be conserved due to xml:space="preserve".
-					lastAppliedTokenType = XmlTokenType::Text;
-					this->out.write(token.chars, token.size);
-				}
-				else
-				{
-					std::string tmp(token.chars, token.size);
-					trim(tmp);
-					if (this->params.ensureConformity)
+				case XmlTokenType::LineBreak:
+					break;
+
+				case XmlTokenType::Whitespace:
+					if (this->params.applySpacePreserve && this->parser->isSpacePreserve())
 					{
-						nexttoken = this->parser->getNextToken();
-						if (tmp.length() > 0 || ((nexttoken.type != XmlTokenType::TagOpening && nexttoken.type != XmlTokenType::Comment && nexttoken.type != XmlTokenType::DeclarationBeg) && (nexttoken.type != XmlTokenType::TagClosing || lastAppliedTokenType == XmlTokenType::TagOpeningEnd)))
-						{
-							lastAppliedTokenType = XmlTokenType::Text;
-							this->out.write(token.chars, token.size);
-						}
+						lastAppliedTokenType = XmlTokenType::Whitespace;
+						this->out.write(token.chars, token.size);
+					}
+					else if (token.context.inOpeningTag)
+					{
+						lastAppliedTokenType = XmlTokenType::Whitespace;
+						this->out << " ";
+					}
+					break;
+
+				case XmlTokenType::Text:
+				{
+					// Braces needed - declaring variables.
+					if (this->params.applySpacePreserve && this->parser->isSpacePreserve())
+					{
+						// Whitespace only text nodes must be conserved due to xml:space="preserve".
+						lastAppliedTokenType = XmlTokenType::Text;
+						this->out.write(token.chars, token.size);
 					}
 					else
 					{
-						lastAppliedTokenType = XmlTokenType::Text;
-						this->out << tmp;
+						std::string tmp(token.chars, token.size);
+						trim(tmp);
+						if (this->params.ensureConformity)
+						{
+							nexttoken = this->parser->getNextToken();
+							if (tmp.length() > 0 || ((nexttoken.type != XmlTokenType::TagOpening && nexttoken.type != XmlTokenType::Comment && nexttoken.type != XmlTokenType::DeclarationBeg) && (nexttoken.type != XmlTokenType::TagClosing || lastAppliedTokenType == XmlTokenType::TagOpeningEnd)))
+							{
+								lastAppliedTokenType = XmlTokenType::Text;
+								this->out.write(token.chars, token.size);
+							}
+						}
+						else
+						{
+							lastAppliedTokenType = XmlTokenType::Text;
+							this->out << tmp;
+						}
 					}
-				}
-				break;
-			}
-			case XmlTokenType::TagOpeningEnd:
-			{
-				if (this->params.ensureConformity)
-				{
-					nexttoken = this->parser->getNextToken();
-				}
-				else
-				{
-					nexttoken = this->parser->getNextStructureToken();
+					break;
 				}
 
-				if (this->params.autoCloseTags && nexttoken.type == XmlTokenType::TagClosing)
-				{
+				case XmlTokenType::TagOpeningEnd:
+					if (this->params.ensureConformity)
+					{
+						nexttoken = this->parser->getNextToken();
+					}
+					else
+					{
+						nexttoken = this->parser->getNextStructureToken();
+					}
+
+					if (this->params.autoCloseTags && nexttoken.type == XmlTokenType::TagClosing)
+					{
+						lastAppliedTokenType = XmlTokenType::TagSelfClosingEnd;
+						this->out << "/>";
+						applyAutoclose = true;
+					}
+					else
+					{
+						lastAppliedTokenType = XmlTokenType::TagOpeningEnd;
+						this->out << ">";
+						applyAutoclose = false;
+					}
+					break;
+
+				case XmlTokenType::TagClosing:
+					// </ns:sample
+					if (!applyAutoclose)
+					{
+						lastAppliedTokenType = XmlTokenType::TagClosing;
+						this->out.write(token.chars, token.size);
+					}
+					break;
+
+				case XmlTokenType::TagClosingEnd:
+					if (!applyAutoclose)
+					{
+						lastAppliedTokenType = XmlTokenType::TagClosingEnd;
+						this->out << ">";
+					}
+					applyAutoclose = false;
+					break;
+
+				case XmlTokenType::TagSelfClosingEnd:
 					lastAppliedTokenType = XmlTokenType::TagSelfClosingEnd;
 					this->out << "/>";
-					applyAutoclose = true;
-				}
-				else
-				{
-					lastAppliedTokenType = XmlTokenType::TagOpeningEnd;
-					this->out << ">";
 					applyAutoclose = false;
-				}
-				break;
-			}
-			case XmlTokenType::TagClosing:
-			{
-				// </ns:sample
-				if (!applyAutoclose)
-				{
-					lastAppliedTokenType = XmlTokenType::TagClosing;
+					break;
+
+				case XmlTokenType::TagOpening:
+				case XmlTokenType::AttrName:
+				case XmlTokenType::Comment:
+				case XmlTokenType::CDATA:
+				case XmlTokenType::DeclarationBeg:
+				case XmlTokenType::DeclarationEnd:
+				case XmlTokenType::AttrValue:
+				case XmlTokenType::Instruction:
+				case XmlTokenType::Equal:
+				case XmlTokenType::Undefined:
+				default:
+					lastAppliedTokenType = token.type;
 					this->out.write(token.chars, token.size);
-				}
-				break;
-			}
-			case XmlTokenType::TagClosingEnd:
-			{
-				if (!applyAutoclose)
-				{
-					lastAppliedTokenType = XmlTokenType::TagClosingEnd;
-					this->out << ">";
-				}
-				applyAutoclose = false;
-				break;
-			}
-			case XmlTokenType::TagSelfClosingEnd:
-			{
-				lastAppliedTokenType = XmlTokenType::TagSelfClosingEnd;
-				this->out << "/>";
-				applyAutoclose = false;
-				break;
-			}
-			case XmlTokenType::TagOpening:
-			case XmlTokenType::AttrName:
-			case XmlTokenType::Comment:
-			case XmlTokenType::CDATA:
-			case XmlTokenType::DeclarationBeg:
-			case XmlTokenType::DeclarationEnd:
-			case XmlTokenType::AttrValue:
-			case XmlTokenType::Instruction:
-			case XmlTokenType::Equal:
-			case XmlTokenType::Undefined:
-			default:
-			{
-				lastAppliedTokenType = token.type;
-				this->out.write(token.chars, token.size);
-				break;
-			}
+					break;
 			}
 		}
 
@@ -300,53 +299,9 @@ namespace QuickXml
 		{
 			switch (token.type)
 			{
-			case XmlTokenType::TagOpening:
-			{
-				// <ns:sample
-				currTagNameLength = token.size;
-				if (this->params.indentOnly)
-				{
-					if (lastTextHasLineBreaks)
-					{
-						this->writeIndentation();
-					}
-				}
-				else if (!(lastAppliedTokenType & (XmlTokenType::Text | XmlTokenType::CDATA | XmlTokenType::Undefined)))
-				{
-					this->writeEOL();
-					this->writeIndentation();
-				}
-				lastAppliedTokenType = XmlTokenType::TagOpening;
-				this->out.write(token.chars, token.size);
-				lastTextHasLineBreaks = false;
-				break;
-			}
-			case XmlTokenType::TagOpeningEnd:
-			{
-				numAttr = 0;
-				nexttoken = this->parser->getNextToken();
-				if (this->params.autoCloseTags && nexttoken.type == XmlTokenType::TagClosing)
-				{
-					lastAppliedTokenType = XmlTokenType::TagSelfClosingEnd;
-					this->out << "/>";
-					applyAutoclose = true;
-				}
-				else
-				{
-					lastAppliedTokenType = XmlTokenType::TagOpeningEnd;
-					this->out << ">";
-					this->updateIndentLevel(1);
-					applyAutoclose = false;
-				}
-				lastTextHasLineBreaks = false;
-				break;
-			}
-			case XmlTokenType::TagClosing:
-			{
-				// </ns:sample
-				if (!applyAutoclose)
-				{
-					this->updateIndentLevel(-1);
+				case XmlTokenType::TagOpening:
+					// <ns:sample
+					currTagNameLength = token.size;
 					if (this->params.indentOnly)
 					{
 						if (lastTextHasLineBreaks)
@@ -354,191 +309,224 @@ namespace QuickXml
 							this->writeIndentation();
 						}
 					}
-					else if (!(lastAppliedTokenType & (XmlTokenType::Text | XmlTokenType::CDATA | XmlTokenType::TagOpeningEnd | XmlTokenType::Undefined)))
+					else if (!(lastAppliedTokenType & (XmlTokenType::Text | XmlTokenType::CDATA | XmlTokenType::Undefined)))
 					{
 						this->writeEOL();
 						this->writeIndentation();
 					}
-					lastAppliedTokenType = XmlTokenType::TagClosing;
+					lastAppliedTokenType = XmlTokenType::TagOpening;
 					this->out.write(token.chars, token.size);
-				}
-				lastTextHasLineBreaks = false;
-				break;
-			}
-			case XmlTokenType::TagClosingEnd:
-			{
-				if (!applyAutoclose)
-				{
-					lastAppliedTokenType = XmlTokenType::TagClosingEnd;
-					this->out << ">";
-				}
-				applyAutoclose = false;
-				lastTextHasLineBreaks = false;
-				break;
-			}
-			case XmlTokenType::TagSelfClosingEnd:
-			{
-				numAttr = 0;
-				lastAppliedTokenType = XmlTokenType::TagSelfClosingEnd;
-				this->out << "/>";
-				applyAutoclose = false;
-				lastTextHasLineBreaks = false;
-				break;
-			}
-			case XmlTokenType::AttrName:
-			{
-				if (this->params.indentAttributes && numAttr > 0)
-				{
-					if (!this->params.indentOnly)
+					lastTextHasLineBreaks = false;
+					break;
+
+				case XmlTokenType::TagOpeningEnd:
+					numAttr = 0;
+					nexttoken = this->parser->getNextToken();
+					if (this->params.autoCloseTags && nexttoken.type == XmlTokenType::TagClosing)
 					{
-						this->writeEOL();
-					}
-					if (!this->params.indentOnly || lastTextHasLineBreaks)
-					{
-						this->writeIndentation();
-						this->writeElement(" ", currTagNameLength);
-					}
-				}
-				++numAttr;
-				this->out << " ";
-				lastAppliedTokenType = XmlTokenType::AttrName;
-				this->out.write(token.chars, token.size);
-				lastTextHasLineBreaks = false;
-				break;
-			}
-			case XmlTokenType::Text:
-			{
-				if (this->params.applySpacePreserve && this->parser->isSpacePreserve())
-				{
-					lastAppliedTokenType = XmlTokenType::Text;
-					this->out.write(token.chars, token.size);
-				}
-				else
-				{
-					// Check if text could be ignored.
-					XmlToken nexttoken = this->parser->getNextToken();
-					std::string tmp(token.chars, token.size);
-					if (this->params.indentOnly)
-					{
-						trim_s(tmp);
+						lastAppliedTokenType = XmlTokenType::TagSelfClosingEnd;
+						this->out << "/>";
+						applyAutoclose = true;
 					}
 					else
 					{
-						trim(tmp);
+						lastAppliedTokenType = XmlTokenType::TagOpeningEnd;
+						this->out << ">";
+						this->updateIndentLevel(1);
+						applyAutoclose = false;
 					}
+					lastTextHasLineBreaks = false;
+					break;
 
-					if (tmp.length() > 0 || ((!(nexttoken.type & (XmlTokenType::TagOpening | XmlTokenType::Comment | XmlTokenType::DeclarationBeg))) && (nexttoken.type != XmlTokenType::TagClosing || lastAppliedTokenType == XmlTokenType::TagOpeningEnd)))
+				case XmlTokenType::TagClosing:
+					// </ns:sample
+					if (!applyAutoclose)
 					{
-						lastAppliedTokenType = XmlTokenType::Text;
+						this->updateIndentLevel(-1);
 						if (this->params.indentOnly)
 						{
-							this->out << tmp;
-							lastTextHasLineBreaks = (tmp.find_first_of("\r\n") != std::string::npos);
+							if (lastTextHasLineBreaks)
+							{
+								this->writeIndentation();
+							}
+						}
+						else if (!(lastAppliedTokenType & (XmlTokenType::Text | XmlTokenType::CDATA | XmlTokenType::TagOpeningEnd | XmlTokenType::Undefined)))
+						{
+							this->writeEOL();
+							this->writeIndentation();
+						}
+						lastAppliedTokenType = XmlTokenType::TagClosing;
+						this->out.write(token.chars, token.size);
+					}
+					lastTextHasLineBreaks = false;
+					break;
+
+				case XmlTokenType::TagClosingEnd:
+					if (!applyAutoclose)
+					{
+						lastAppliedTokenType = XmlTokenType::TagClosingEnd;
+						this->out << ">";
+					}
+					applyAutoclose = false;
+					lastTextHasLineBreaks = false;
+					break;
+
+				case XmlTokenType::TagSelfClosingEnd:
+					numAttr = 0;
+					lastAppliedTokenType = XmlTokenType::TagSelfClosingEnd;
+					this->out << "/>";
+					applyAutoclose = false;
+					lastTextHasLineBreaks = false;
+					break;
+
+				case XmlTokenType::AttrName:
+					if (this->params.indentAttributes && numAttr > 0)
+					{
+						if (!this->params.indentOnly)
+						{
+							this->writeEOL();
+						}
+						if (!this->params.indentOnly || lastTextHasLineBreaks)
+						{
+							this->writeIndentation();
+							this->writeElement(" ", currTagNameLength);
+						}
+					}
+					++numAttr;
+					this->out << " ";
+					lastAppliedTokenType = XmlTokenType::AttrName;
+					this->out.write(token.chars, token.size);
+					lastTextHasLineBreaks = false;
+					break;
+
+				case XmlTokenType::Text:
+				{
+					// Braces needed - declaring variables.
+					if (this->params.applySpacePreserve && this->parser->isSpacePreserve())
+					{
+						lastAppliedTokenType = XmlTokenType::Text;
+						this->out.write(token.chars, token.size);
+					}
+					else
+					{
+						// Check if text could be ignored.
+						XmlToken nexttoken = this->parser->getNextToken();
+						std::string tmp(token.chars, token.size);
+						if (this->params.indentOnly)
+						{
+							trim_s(tmp);
 						}
 						else
 						{
-							this->out.write(token.chars, token.size);
+							trim(tmp);
+						}
+
+						if (tmp.length() > 0 || ((!(nexttoken.type & (XmlTokenType::TagOpening | XmlTokenType::Comment | XmlTokenType::DeclarationBeg))) && (nexttoken.type != XmlTokenType::TagClosing || lastAppliedTokenType == XmlTokenType::TagOpeningEnd)))
+						{
+							lastAppliedTokenType = XmlTokenType::Text;
+							if (this->params.indentOnly)
+							{
+								this->out << tmp;
+								lastTextHasLineBreaks = (tmp.find_first_of("\r\n") != std::string::npos);
+							}
+							else
+							{
+								this->out.write(token.chars, token.size);
+							}
 						}
 					}
+					break;
 				}
-				break;
-			}
-			case XmlTokenType::LineBreak:
-			{
-				if (this->params.applySpacePreserve && this->parser->isSpacePreserve())
-				{
-					lastAppliedTokenType = XmlTokenType::LineBreak;
-					this->out.write(token.chars, token.size);
-				}
-				else if (this->params.indentOnly)
-				{
-					lastAppliedTokenType = XmlTokenType::LineBreak;
-					this->out.write(token.chars, token.size);
-					lastTextHasLineBreaks = true;
-				}
-				break;
-			}
-			case XmlTokenType::DeclarationBeg:
-			case XmlTokenType::DeclarationSelfClosing:
-			{
-				// <!...[
-				if (this->params.indentOnly)
-				{
-					if (lastTextHasLineBreaks)
+
+				case XmlTokenType::LineBreak:
+					if (this->params.applySpacePreserve && this->parser->isSpacePreserve())
 					{
-						this->writeIndentation();
+						lastAppliedTokenType = XmlTokenType::LineBreak;
+						this->out.write(token.chars, token.size);
 					}
-				}
-				else if (!(lastAppliedTokenType & (XmlTokenType::Text | XmlTokenType::CDATA | XmlTokenType::Undefined)))
-				{
-					this->writeEOL();
-					this->writeIndentation();
-				}
-				lastAppliedTokenType = token.type;
-				this->out.write(token.chars, token.size);
-				if (token.type == XmlTokenType::DeclarationBeg)
-				{
-					this->updateIndentLevel(1);
-				}
-				break;
-			}
-			case XmlTokenType::DeclarationEnd:
-			{
-				// > or ]>.
-				this->updateIndentLevel(-1);
-				if (token.chars[0] == ']')
-				{
-					if (!this->params.indentOnly)
+					else if (this->params.indentOnly)
+					{
+						lastAppliedTokenType = XmlTokenType::LineBreak;
+						this->out.write(token.chars, token.size);
+						lastTextHasLineBreaks = true;
+					}
+					break;
+
+				case XmlTokenType::DeclarationBeg:
+				case XmlTokenType::DeclarationSelfClosing:
+					// <!...[
+					if (this->params.indentOnly)
+					{
+						if (lastTextHasLineBreaks)
+						{
+							this->writeIndentation();
+						}
+					}
+					else if (!(lastAppliedTokenType & (XmlTokenType::Text | XmlTokenType::CDATA | XmlTokenType::Undefined)))
 					{
 						this->writeEOL();
-					}
-					this->writeIndentation();
-				}
-				lastAppliedTokenType = XmlTokenType::DeclarationEnd;
-				this->out.write(token.chars, token.size);
-				break;
-			}
-			case XmlTokenType::Comment:
-			{
-				if (this->params.indentOnly)
-				{
-					if (lastTextHasLineBreaks)
-					{
 						this->writeIndentation();
 					}
-				}
-				else if (!(lastAppliedTokenType & (XmlTokenType::Text | XmlTokenType::CDATA | XmlTokenType::Undefined)))
-				{
-					this->writeEOL();
-					this->writeIndentation();
-				}
-				lastAppliedTokenType = XmlTokenType::Comment;
-				this->out.write(token.chars, token.size);
-				lastTextHasLineBreaks = false;
-				break;
-			}
-			case XmlTokenType::Whitespace:
-			{
-				if (this->params.applySpacePreserve && this->parser->isSpacePreserve())
-				{
-					lastAppliedTokenType = XmlTokenType::Whitespace;
+					lastAppliedTokenType = token.type;
 					this->out.write(token.chars, token.size);
-				}
-				break;
-			}
-			case XmlTokenType::CDATA:
-			case XmlTokenType::AttrValue:
-			case XmlTokenType::Instruction:
-			case XmlTokenType::Equal:
-			case XmlTokenType::EndOfFile:
-			case XmlTokenType::Undefined:
-			default:
-			{
-				lastAppliedTokenType = token.type;
-				this->out.write(token.chars, token.size);
-				lastTextHasLineBreaks = false;
-				break;
-			}
+					if (token.type == XmlTokenType::DeclarationBeg)
+					{
+						this->updateIndentLevel(1);
+					}
+					break;
+
+				case XmlTokenType::DeclarationEnd:
+					// > or ]>.
+					this->updateIndentLevel(-1);
+					if (token.chars[0] == ']')
+					{
+						if (!this->params.indentOnly)
+						{
+							this->writeEOL();
+						}
+						this->writeIndentation();
+					}
+					lastAppliedTokenType = XmlTokenType::DeclarationEnd;
+					this->out.write(token.chars, token.size);
+					break;
+
+				case XmlTokenType::Comment:
+					if (this->params.indentOnly)
+					{
+						if (lastTextHasLineBreaks)
+						{
+							this->writeIndentation();
+						}
+					}
+					else if (!(lastAppliedTokenType & (XmlTokenType::Text | XmlTokenType::CDATA | XmlTokenType::Undefined)))
+					{
+						this->writeEOL();
+						this->writeIndentation();
+					}
+					lastAppliedTokenType = XmlTokenType::Comment;
+					this->out.write(token.chars, token.size);
+					lastTextHasLineBreaks = false;
+					break;
+
+				case XmlTokenType::Whitespace:
+					if (this->params.applySpacePreserve && this->parser->isSpacePreserve())
+					{
+						lastAppliedTokenType = XmlTokenType::Whitespace;
+						this->out.write(token.chars, token.size);
+					}
+					break;
+
+				case XmlTokenType::CDATA:
+				case XmlTokenType::AttrValue:
+				case XmlTokenType::Instruction:
+				case XmlTokenType::Equal:
+				case XmlTokenType::EndOfFile:
+				case XmlTokenType::Undefined:
+				default:
+					lastAppliedTokenType = token.type;
+					this->out.write(token.chars, token.size);
+					lastTextHasLineBreaks = false;
+					break;
 			}
 		}
 
@@ -573,106 +561,105 @@ namespace QuickXml
 
 			switch (token.type)
 			{
-			case XmlTokenType::TagOpening:
-			{
-				std::string nodename = std::string(token.chars + 1, token.size - 1);
-				XmlFormatterXPathEntry pathElement;
-				pathElement.name = nodename;
-				pathElement.position = 0;
+				case XmlTokenType::TagOpening:
+				{
+					// Braces needed - declaring variables.
+					std::string nodename = std::string(token.chars + 1, token.size - 1);
+					XmlFormatterXPathEntry pathElement;
+					pathElement.name = nodename;
+					pathElement.position = 0;
 
-				if ((xpathMode & XPATH_MODE_WITHNODEINDEX) != 0)
-				{
-					std::map<std::string, size_t> depthMap;
-					// Push a new map for the new layer onto the depthElementMap.
-					depthElementMap.push_back(depthMap);
-					size_t dem = depthElementMap.size();
+					if ((xpathMode & XPATH_MODE_WITHNODEINDEX) != 0)
+					{
+						std::map<std::string, size_t> depthMap;
+						// Push a new map for the new layer onto the depthElementMap.
+						depthElementMap.push_back(depthMap);
+						size_t dem = depthElementMap.size();
 
-					if (dem > 1)
-					{
-						// Increase amount of elements at current depth.
-						pathElement.position = ++(depthElementMap.at(dem - 2)[nodename]);
+						if (dem > 1)
+						{
+							// Increase amount of elements at current depth.
+							pathElement.position = ++(depthElementMap.at(dem - 2)[nodename]);
+						}
 					}
+
+					vPath.push_back(pathElement);
+					keep_attr_value = false;
+					break;
 				}
 
-				vPath.push_back(pathElement);
-				keep_attr_value = false;
-				break;
-			}
-			case XmlTokenType::TagClosingEnd:
-			{
-				if (!vPath.empty()) vPath.pop_back();
-				if ((xpathMode & XPATH_MODE_WITHNODEINDEX) != 0)
-				{
-					depthElementMap.pop_back();
-				}
-				keep_attr_value = false;
-				break;
-			}
-			case XmlTokenType::TagSelfClosingEnd:
-			{
-				if ((xpathMode & XPATH_MODE_WITHNODEINDEX) != 0)
-				{
-					depthElementMap.pop_back();
-				}
-				vPath.pop_back();
-				keep_attr_value = false;
-				break;
-			}
-			case XmlTokenType::AttrName:
-			{
-				std::string attr(token.chars, token.size);
-				if ((xpathMode & XPATH_MODE_KEEPIDATTRIBUTE) != 0 && isIdentAttribute(attr))
-				{
-					// We must check if attribute is "id"; if true, we must rewrite the.
-					// Tag name and add the value of @id attribute.
-					keep_attr_value = true;
-				}
-				vPath.back().attr = attr;
-				break;
-			}
-			case XmlTokenType::AttrValue:
-			{
-				if (keep_attr_value && vPath.size() >= 2)
-				{
-					if (this->params.dumpIdAttributesName)
+				case XmlTokenType::TagClosingEnd:
+					if (!vPath.empty())
 					{
-						vPath.back().attributes.push_back({ vPath.back().attr, std::string(token.chars, token.size) });
+						vPath.pop_back();
 					}
-					else
+					if ((xpathMode & XPATH_MODE_WITHNODEINDEX) != 0)
 					{
-						vPath.back().attributes.push_back({ vPath.back().attr, std::string(token.chars + 1, token.size - 2) });
+						depthElementMap.pop_back();
 					}
+					keep_attr_value = false;
+					break;
+
+				case XmlTokenType::TagSelfClosingEnd:
+					if ((xpathMode & XPATH_MODE_WITHNODEINDEX) != 0)
+					{
+						depthElementMap.pop_back();
+					}
+					vPath.pop_back();
+					keep_attr_value = false;
+					break;
+
+				case XmlTokenType::AttrName:
+				{
+					// Braces needed - declaring variables.
+					std::string attr(token.chars, token.size);
+					if ((xpathMode & XPATH_MODE_KEEPIDATTRIBUTE) != 0 && isIdentAttribute(attr))
+					{
+						// We must check if attribute is "id"; if true, we must rewrite the tag name and add the value of @id attribute.
+						keep_attr_value = true;
+					}
+					vPath.back().attr = attr;
+					break;
 				}
-				keep_attr_value = false;
-				break;
-			}
-			case XmlTokenType::TagOpeningEnd:
-			{
-				keep_attr_value = false;
-				vPath.back().attr = "";
-				break;
-			}
-			case XmlTokenType::DeclarationBeg:
-			case XmlTokenType::DeclarationEnd:
-			{
-				// Declarations might corrupt the vPath construction.
-				vPath.clear();
-				keep_attr_value = false;
-				break;
-			}
-			case XmlTokenType::LineBreak:
-			case XmlTokenType::Whitespace:
-			case XmlTokenType::Text:
-			case XmlTokenType::TagClosing:
-			case XmlTokenType::Comment:
-			case XmlTokenType::CDATA:
-			case XmlTokenType::Instruction:
-			case XmlTokenType::Equal:
-			case XmlTokenType::Undefined:
-			default:
-			{
-				break;
-			}
+
+				case XmlTokenType::AttrValue:
+					if (keep_attr_value && vPath.size() >= 2)
+					{
+						if (this->params.dumpIdAttributesName)
+						{
+							vPath.back().attributes.push_back({ vPath.back().attr, std::string(token.chars, token.size) });
+						}
+						else
+						{
+							vPath.back().attributes.push_back({ vPath.back().attr, std::string(token.chars + 1, token.size - 2) });
+						}
+					}
+					keep_attr_value = false;
+					break;
+
+				case XmlTokenType::TagOpeningEnd:
+					keep_attr_value = false;
+					vPath.back().attr = "";
+					break;
+
+				case XmlTokenType::DeclarationBeg:
+				case XmlTokenType::DeclarationEnd:
+					// Declarations might corrupt the vPath construction.
+					vPath.clear();
+					keep_attr_value = false;
+					break;
+
+				case XmlTokenType::LineBreak:
+				case XmlTokenType::Whitespace:
+				case XmlTokenType::Text:
+				case XmlTokenType::TagClosing:
+				case XmlTokenType::Comment:
+				case XmlTokenType::CDATA:
+				case XmlTokenType::Instruction:
+				case XmlTokenType::Equal:
+				case XmlTokenType::Undefined:
+				default:
+					break;
 			}
 		}
 
@@ -708,14 +695,21 @@ namespace QuickXml
 						{
 							key = attr.key.substr(p + 1);
 						}
+
 						if (this->params.dumpIdAttributesName)
 						{
-							if (i > 0) out_attr << " ";
+							if (i > 0)
+							{
+								out_attr << " ";
+							}
 							out_attr << key << "=" << attr.val;
 						}
 						else
 						{
-							if (i > 0) out_attr << " | ";
+							if (i > 0)
+							{
+								out_attr << " | ";
+							}
 							out_attr << attr.val;
 						}
 					}

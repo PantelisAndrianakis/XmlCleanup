@@ -47,7 +47,7 @@ namespace QuickXml
 
 	XmlToken XmlParser::getNextStructureToken()
 	{
-		// @fixme Should we consider whitespace and linebreaks has structure token in opening tag ?
+		// @fixme Should we consider whitespace and linebreaks has structure token in opening tag?
 		if (!(this->nexttoken.type & (XmlTokenType::Whitespace | XmlTokenType::LineBreak | XmlTokenType::Text)))
 		{
 			return this->nexttoken;
@@ -132,7 +132,7 @@ namespace QuickXml
 			currpos_bak = this->currpos;
 			if (currentchar == '<')
 			{
-				// @todo : prevent reading outside chars buffer
+				// @todo: Prevent reading outside chars buffer.
 				if (cursor[1] == '?')
 				{
 					// <?xml ...?>
@@ -157,8 +157,7 @@ namespace QuickXml
 					this->currcontext.inClosingTag = false;
 					return { XmlTokenType::Comment, this->currpos, startpos, this->readUntil("-->", 0, true), this->currcontext };
 				}
-				else if (cursor[1] == '!' && cursor[2] == '[' && cursor[3] == 'C' && cursor[4] == 'D' &&
-					cursor[5] == 'A' && cursor[6] == 'T' && cursor[7] == 'A' && cursor[8] == '[')
+				else if (cursor[1] == '!' && cursor[2] == '[' && cursor[3] == 'C' && cursor[4] == 'D' && cursor[5] == 'A' && cursor[6] == 'T' && cursor[7] == 'A' && cursor[8] == '[')
 				{
 					// <![CDATA[
 					// Let's leave it untouched.
@@ -174,25 +173,17 @@ namespace QuickXml
 					this->currcontext.inClosingTag = false;
 					this->currcontext.declarationObjects++;
 
-					/*
-					// do not parse declarations at all
-					XmlToken token = { XmlTokenType::Declaration, this->currpos, startpos, this->readUntil(">", 0, false, "<") };
-					cursor = this->srcText + this->currpos;
-					return token;
-					*/
-
 					// Parse declarations.
 					// We must decide if we have a DeclarationBeg or DeclarationSelfClosing.
 					size_t ncharsread = this->readDeclaration();
 					cursor = this->srcText + this->currpos - 1;
 					XmlTokenType tokentype = (cursor[0] == '>' ? XmlTokenType::DeclarationSelfClosing : XmlTokenType::DeclarationBeg);
-					if (tokentype == XmlTokenType::DeclarationSelfClosing) this->currcontext.declarationObjects--;
+					if (tokentype == XmlTokenType::DeclarationSelfClosing)
+					{
+						this->currcontext.declarationObjects--;
+					}
 
 					XmlToken token = { tokentype, currpos_bak, startpos, ncharsread, this->currcontext };
-					/*if (cursor[0] == '[') {
-						this->readChars(1);
-						token.size++;
-					} */
 					return token;
 				}
 				else if (cursor[1] == '/')
@@ -336,12 +327,12 @@ namespace QuickXml
 						{
 							if (!strncmp(tmp.chars + 1, "preserve", tmp.size - 2))
 							{
-								this->preserveSpace.pop();	// Replace the actual stack top.
+								this->preserveSpace.pop(); // Replace the actual stack top.
 								this->preserveSpace.push(true);
 							}
 							else if (!strncmp(tmp.chars + 1, "default", tmp.size - 2))
 							{
-								this->preserveSpace.pop();	// Replace the actual stack top.
+								this->preserveSpace.pop(); // Replace the actual stack top.
 								this->preserveSpace.push(false);
 							}
 						}
@@ -423,10 +414,16 @@ namespace QuickXml
 	size_t XmlParser::readUntilFirstOf(const char* characters, size_t offset, bool goAfter)
 	{
 		size_t res = 0;
-		if (offset > 0) offset = this->readChars(offset);
+		if (offset > 0)
+		{
+			offset = this->readChars(offset);
+		}
 		const char* cursor = this->srcText + this->currpos;
 		const char* tmp = strpbrk(cursor, characters);
-		if (!tmp) tmp = this->srcText + this->srcLength;
+		if (!tmp)
+		{
+			tmp = this->srcText + this->srcLength;
+		}
 		res = tmp - cursor;
 		if (goAfter)
 		{
@@ -442,7 +439,10 @@ namespace QuickXml
 
 	size_t XmlParser::readUntilFirstNotOf(const char* characters, size_t offset)
 	{
-		if (offset > 0) offset = this->readChars(offset);
+		if (offset > 0)
+		{
+			offset = this->readChars(offset);
+		}
 		size_t res = strspn(this->srcText + this->currpos, characters);
 		this->currpos += res;
 		return res + offset;
@@ -451,7 +451,10 @@ namespace QuickXml
 	size_t XmlParser::readUntil(const char* delimiter, size_t offset, bool goAfter, std::string skipDelimiter)
 	{
 		size_t res = 0;
-		if (offset > 0) offset = this->readChars(offset);
+		if (offset > 0)
+		{
+			offset = this->readChars(offset);
+		}
 		const char* cursor = this->srcText + this->currpos;
 		if (skipDelimiter.length() > 0)
 		{
@@ -473,7 +476,10 @@ namespace QuickXml
 					cursor = end + 1;
 				}
 			} while (lvl > 0);
-			if (!end) end = this->srcText + this->srcLength;
+			if (!end)
+			{
+				end = this->srcText + this->srcLength;
+			}
 			res = end - (this->srcText + this->currpos);
 			if (goAfter)
 			{
@@ -484,7 +490,10 @@ namespace QuickXml
 		else
 		{
 			const char* end = strstr(cursor, delimiter);
-			if (!end) end = this->srcText + this->srcLength;
+			if (!end)
+			{
+				end = this->srcText + this->srcLength;
+			}
 			res = end - cursor;
 			if (goAfter)
 			{
@@ -497,22 +506,22 @@ namespace QuickXml
 
 	size_t XmlParser::readDeclaration()
 	{
-		/*
-		* We are starting to parse a declaration like followings.
-		*    <![INCLUDE
-		*    <!DOCTYPE
-		*    <!ENTITY
-		*    <![%draft;[
-		*    Etc.
-		* Based on https://www.w3.org/TR/xml/ analysis, I'll consider three kinds of declarations:
-		* 1) <!...  >.
-		* 2) <!... [.
-		*    ...
-		*    ]>
-		* 3) <![ ... [.
-		*    ...
-		*    ]]>
-		*/
+		/**
+		 * We are starting to parse a declaration like followings.
+		 *    <![INCLUDE
+		 *    <!DOCTYPE
+		 *    <!ENTITY
+		 *    <![%draft;[
+		 *    Etc.
+		 * Based on https://www.w3.org/TR/xml/ analysis, I'll consider three kinds of declarations:
+		 * 1) <!...  >.
+		 * 2) <!... [.
+		 *    ...
+		 *    ]>
+		 * 3) <![ ... [.
+		 *    ...
+		 *    ]]>
+		 */
 
 		size_t res = 0;
 		const char* cursor = this->srcText + this->currpos;
@@ -553,51 +562,123 @@ namespace QuickXml
 		{
 			switch (this->currtoken.type)
 			{
-			case XmlTokenType::TagOpening: return "_TAG_OPENING_";
-			case XmlTokenType::TagClosing: return "_TAG_CLOSING_";
-			case XmlTokenType::TagOpeningEnd: return "_TAG_OPENING_END_";
-			case XmlTokenType::TagClosingEnd: return "_TAG_CLOSING_END_";
-			case XmlTokenType::TagSelfClosingEnd: return "_TAG_SELFCLOSING_END_";
-			case XmlTokenType::AttrName: return "_ATTR_NAME_";
-			case XmlTokenType::AttrValue: return "_ATTR_VALUE_";
-			case XmlTokenType::Text: return "_TEXT_";
-			case XmlTokenType::Whitespace: return "_WHITESPACE_";
-			case XmlTokenType::Instruction: return "_INSTRUCTION_";
-			case XmlTokenType::DeclarationBeg: return "_DECLARATION_";
-			case XmlTokenType::DeclarationEnd: return "_DECLARATION_END_";
-			case XmlTokenType::DeclarationSelfClosing: return "_DECLARATION_SELFCLOSING_";
-			case XmlTokenType::Comment: return "_COMMENT_";
-			case XmlTokenType::CDATA: return "_CDATA_";
-			case XmlTokenType::LineBreak: return "_LINEBREAK_";
-			case XmlTokenType::Equal: return "_EQUAL_";
-			case XmlTokenType::EndOfFile: return "_EOF_";
-			case XmlTokenType::Undefined:
-			default: return "_UNDEFINED_";
+				case XmlTokenType::TagOpening:
+					return "_TAG_OPENING_";
+
+				case XmlTokenType::TagClosing:
+					return "_TAG_CLOSING_";
+
+				case XmlTokenType::TagOpeningEnd:
+					return "_TAG_OPENING_END_";
+
+				case XmlTokenType::TagClosingEnd:
+					return "_TAG_CLOSING_END_";
+
+				case XmlTokenType::TagSelfClosingEnd:
+					return "_TAG_SELFCLOSING_END_";
+
+				case XmlTokenType::AttrName:
+					return "_ATTR_NAME_";
+
+				case XmlTokenType::AttrValue:
+					return "_ATTR_VALUE_";
+
+				case XmlTokenType::Text:
+					return "_TEXT_";
+
+				case XmlTokenType::Whitespace:
+					return "_WHITESPACE_";
+
+				case XmlTokenType::Instruction:
+					return "_INSTRUCTION_";
+
+				case XmlTokenType::DeclarationBeg:
+					return "_DECLARATION_";
+
+				case XmlTokenType::DeclarationEnd:
+					return "_DECLARATION_END_";
+
+				case XmlTokenType::DeclarationSelfClosing:
+					return "_DECLARATION_SELFCLOSING_";
+
+				case XmlTokenType::Comment:
+					return "_COMMENT_";
+
+				case XmlTokenType::CDATA:
+					return "_CDATA_";
+
+				case XmlTokenType::LineBreak:
+					return "_LINEBREAK_";
+
+				case XmlTokenType::Equal:
+					return "_EQUAL_";
+
+				case XmlTokenType::EndOfFile:
+					return "_EOF_";
+
+				case XmlTokenType::Undefined:
+				default:
+					return "_UNDEFINED_";
 			}
 		}
 		else
 		{
 			switch (this->currtoken.type)
 			{
-			case XmlTokenType::TagOpening: return "TAG_OPENING";
-			case XmlTokenType::TagClosing: return "TAG_CLOSING";
-			case XmlTokenType::TagOpeningEnd: return "TAG_OPENING_END";
-			case XmlTokenType::TagClosingEnd: return "TAG_CLOSING_END";
-			case XmlTokenType::TagSelfClosingEnd: return "TAG_SELFCLOSING_END";
-			case XmlTokenType::AttrName: return "ATTR_NAME";
-			case XmlTokenType::AttrValue: return "ATTR_VALUE";
-			case XmlTokenType::Text: return "TEXT";
-			case XmlTokenType::Whitespace: return "WHITESPACE";
-			case XmlTokenType::Instruction: return "INSTRUCTION";
-			case XmlTokenType::DeclarationBeg: return "DECLARATION";
-			case XmlTokenType::DeclarationEnd: return "DECLARATION_END";
-			case XmlTokenType::Comment: return "COMMENT";
-			case XmlTokenType::CDATA: return "CDATA";
-			case XmlTokenType::LineBreak: return "LINEBREAK";
-			case XmlTokenType::Equal: return "EQUAL";
-			case XmlTokenType::EndOfFile: return "EOF";
-			case XmlTokenType::Undefined:
-			default: return "UNDEFINED";
+				case XmlTokenType::TagOpening:
+					return "TAG_OPENING";
+
+				case XmlTokenType::TagClosing:
+					return "TAG_CLOSING";
+
+				case XmlTokenType::TagOpeningEnd:
+					return "TAG_OPENING_END";
+
+				case XmlTokenType::TagClosingEnd:
+					return "TAG_CLOSING_END";
+
+				case XmlTokenType::TagSelfClosingEnd:
+					return "TAG_SELFCLOSING_END";
+
+				case XmlTokenType::AttrName:
+					return "ATTR_NAME";
+
+				case XmlTokenType::AttrValue:
+					return "ATTR_VALUE";
+
+				case XmlTokenType::Text:
+					return "TEXT";
+
+				case XmlTokenType::Whitespace:
+					return "WHITESPACE";
+
+				case XmlTokenType::Instruction:
+					return "INSTRUCTION";
+
+				case XmlTokenType::DeclarationBeg:
+					return "DECLARATION";
+
+				case XmlTokenType::DeclarationEnd:
+					return "DECLARATION_END";
+
+				case XmlTokenType::Comment:
+					return "COMMENT";
+
+				case XmlTokenType::CDATA:
+					return "CDATA";
+
+				case XmlTokenType::LineBreak:
+					return "LINEBREAK";
+
+				case XmlTokenType::Equal:
+					return "EQUAL";
+
+				case XmlTokenType::EndOfFile:
+					return "EOF";
+
+				case XmlTokenType::Undefined:
+				default:
+					return "UNDEFINED";
 			}
 		}
 	}
