@@ -69,6 +69,105 @@ std::string normalizeLineEndings(const std::string& content)
 	return finalResult;
 }
 
+// Helper function to format single-line XML comments with proper spacing.
+/**
+ * Formats single-line XML comments to ensure consistent spacing.
+ * Adds one space after <!-- and one space before --> for better readability.
+ * Normalizes multiple consecutive spaces within comment text to a single space.
+ * Only affects single-line comments; multi-line comments remain unchanged.
+ */
+std::string formatSingleLineComments(const std::string& xml)
+{
+	std::string result = xml;
+	size_t pos = 0;
+	
+	while ((pos = result.find("<!--", pos)) != std::string::npos)
+	{
+		// Find the end of this comment.
+		size_t endPos = result.find("-->", pos);
+		if (endPos == std::string::npos)
+		{
+			// No end tag found, move past this one.
+			pos += 4;
+			continue;
+		}
+		
+		// Check if this is a single-line comment (no newlines between start and end).
+		std::string commentText = result.substr(pos, endPos - pos + 3);
+		if (commentText.find('\n') == std::string::npos && commentText.find('\r') == std::string::npos)
+		{
+			// Extract the comment content (between <!-- and -->).
+			std::string commentContent = result.substr(pos + 4, endPos - (pos + 4));
+			
+			// Trim leading and trailing spaces
+			size_t startTrim = commentContent.find_first_not_of(' ');
+			size_t endTrim = commentContent.find_last_not_of(' ');
+			
+			if (startTrim != std::string::npos && endTrim != std::string::npos)
+			{
+				commentContent = commentContent.substr(startTrim, endTrim - startTrim + 1);
+			}
+			else if (startTrim != std::string::npos)
+			{
+				commentContent = commentContent.substr(startTrim);
+			}
+			else if (endTrim != std::string::npos)
+			{
+				commentContent = commentContent.substr(0, endTrim + 1);
+			}
+			else
+			{
+				commentContent = ""; // Comment was all spaces.
+			}
+			
+			// Normalize multiple spaces to single space within the comment content.
+			std::string normalizedContent;
+			normalizedContent.reserve(commentContent.length());
+			bool lastWasSpace = false;
+			
+			for (char c : commentContent)
+			{
+				if (c == ' ')
+				{
+					if (!lastWasSpace)
+					{
+						normalizedContent.push_back(c);
+						lastWasSpace = true;
+					}
+				}
+				else
+				{
+					normalizedContent.push_back(c);
+					lastWasSpace = false;
+				}
+			}
+			
+			// Replace the original comment with the normalized one.
+			std::string newComment;
+			if (normalizedContent.empty())
+			{
+				// For empty comments, use only one space between tags.
+				newComment = "<!-- -->";
+			}
+			else
+			{
+				newComment = "<!-- " + normalizedContent + " -->";
+			}
+			result.replace(pos, endPos - pos + 3, newComment);
+			
+			// Adjust position based on the new comment length.
+			pos += newComment.length();
+		}
+		else
+		{
+			// This is a multi-line comment, skip it.
+			pos = endPos + 3;
+		}
+	}
+	
+	return result;
+}
+
 // Indent XML content using QuickXml formatter.
 std::string XmlIndenter::indentXML()
 {
@@ -140,6 +239,9 @@ std::string XmlIndenter::indentXML()
 	}
 
 	formattedXml = resultStr;
+
+	// Format single-line XML comments to ensure proper spacing.
+	formattedXml = formatSingleLineComments(formattedXml);
 
 	// Normalize all line endings to Windows style (\r\n).
 	formattedXml = normalizeLineEndings(formattedXml);

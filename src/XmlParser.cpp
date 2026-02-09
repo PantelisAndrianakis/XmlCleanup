@@ -440,7 +440,6 @@ namespace QuickXml
 		return res + offset;
 	}
 
-
 	size_t XmlParser::readUntilFirstNotOf(const char* characters, size_t offset)
 	{
 		if (offset > 0) offset = this->readChars(offset);
