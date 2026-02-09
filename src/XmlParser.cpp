@@ -47,7 +47,7 @@ namespace QuickXml
 
 	XmlToken XmlParser::getNextStructureToken()
 	{
-		// @fixme Should we consider whitespace and linebreaks has structure token in opening tag?
+		// @FIXME Should we consider whitespace and linebreaks has structure token in opening tag?
 		if (!(this->nexttoken.type & (XmlTokenType::Whitespace | XmlTokenType::LineBreak | XmlTokenType::Text)))
 		{
 			return this->nexttoken;
@@ -132,7 +132,7 @@ namespace QuickXml
 			currpos_bak = this->currpos;
 			if (currentchar == '<')
 			{
-				// @todo: Prevent reading outside chars buffer.
+				// @TODO: Prevent reading outside chars buffer.
 				if (cursor[1] == '?')
 				{
 					// <?xml ...?>
