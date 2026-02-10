@@ -78,113 +78,51 @@ namespace QuickXml
 		std::stack<bool> preserveSpace;
 
 	public:
-		/**
-		 * Constructor.
-		 * @param data The data to parse.
-		 * @param length The data length.
-		 */
+		// Constructor.
 		XmlParser(const char* data, size_t length);
 
-		/**
-		 * Destructor.
-		 */
+		// Destructor.
 		~XmlParser();
 
-		/**
-		 * Reset the parser settings.
-		 */
+		// Reset the parser settings.
 		void reset();
 
-		/**
-		 * Getters.
-		 */
+		// Getters.
 		XmlToken getPrevToken() { return this->prevtoken; }
 		XmlToken getCurrToken() { return this->currtoken; }
 		XmlToken getNextToken() { return this->nexttoken; }
 
-		/**
-		 * Indicates if the current node is in xml:space="preserve" context.
-		 * @param contextualized Should the current parsing context be considered.
-		 * @return True when xml:space is in preserve mode.
-		 */
+		// Indicates if the current node is in xml:space="preserve" context.
 		bool isSpacePreserve();
 
-		/**
-		 * Get the next non-text token.
-		 * This function feeds the tokens queue until it finds a structural token.
-		 * The queue is popped on next "parseNext()" calls.
-		 * @return The next non-text token.
-		 */
+		// Get the next non-text token. This function feeds the tokens queue until it finds a structural token. The queue is popped on next "parseNext()" calls.
 		XmlToken getNextStructureToken();
 
-		/**
-		 * Fetch next token.
-		 * @return The next recognized token.
-		 */
+		// Fetch next token.
 		XmlToken parseNext();
 
-		/**
-		 * Parse input until first token of given type.
-		 * @param type The type of tokens to fetch; multiple tokens can be passed using OR operator
-		 *             (ex. XmlTokenType::Declaration | XmlTokenType::TagOpening).
-		 * @return The found token. The EndOfFile token is returned if no occurrence could be found.
-		 */
+		// Parse input until first token of given type. Multiple tokens can be passed using OR operator (ex. XmlTokenType::Declaration | XmlTokenType::TagOpening).
 		XmlToken parseUntil(XmlTokensType type);
 
-		/**
-		 * Reads some chars in main stream.
-		 * @param nchars The number of chars to read.
-		 * @return The number of chars read (might be lower than parameter, especially when reaching the end of stream).
-		 */
+		// Reads some chars in main stream.
 		size_t readChars(size_t nchars = 1);
 
-		/**
-		 * Reads the next word in main stream and update cursor position.
-		 * @return The size of word.
-		 */
+		// Reads the next word in main stream and update cursor position.
 		size_t readNextWord(bool skipQuotedStrings = false);
 
-		/**
-		 * Reads stream (and update cursor position) until given delimiter.
-		 * @param delimiter The string to search.
-		 * @param offset The number of chars to skip before checking delimiter.
-		 * @param goAfter Indicates to place cursor after the delimiter.
-		 * @param skipDelimiter A delimiter which introduce a segment to ignore. Let's consider following example:
-		 *                      <!DOCTYPE greeting [.
-		 *                        <!ELEMENT greeting (#PCDATA)>
-		 *                      ]>
-		 *                      Reading until delimiter ">" with skipDelimiter "<" will skip the internal <!ELEMENT..>
-		 * @return Number of read chars.
-		 */
+		// Reads stream (and update cursor position) until given delimiter. A delimiter which introduce a segment to ignore can be used with skipDelimiter parameter.
 		size_t readUntil(const char* delimiter, size_t offset = 0, bool goAfter = false, std::string skipDelimiter = "");
 
-		/**
-		 * Reads stream (and update cursor position) until it finds one of given characters.
-		 * @param characters Set of characters to find.
-		 * @param offset The number of chars to skip before checking characters.
-		 * @param goAfter Indicates to place cursor after the delimiter.
-		 * @return Number of read chars.
-		 */
+		// Reads stream (and update cursor position) until it finds one of given characters.
 		size_t readUntilFirstOf(const char* characters, size_t offset = 0, bool goAfter = false);
 
-		/**
-		 * Reads stream (and update cursor position) until it finds any characters which differs from given characters.
-		 * @param characters Set of characters to skip.
-		 * @param offset The number of chars to skip before checking characters.
-		 * @return Number of read chars.
-		 */
+		// Reads stream (and update cursor position) until it finds any characters which differs from given characters.
 		size_t readUntilFirstNotOf(const char* characters, size_t offset = 0);
 
-		/**
-		 * Reads stream until end of incoming declaration.
-		 * @return Number of read chars.
-		 */
+		// Reads stream until end of incoming declaration.
 		size_t readDeclaration();
 
-		/**
-		 * Gets the current token name (for debug).
-		 * @return A string representation of current token.
-		 */
+		// Gets the current token name (for debug).
 		std::string getTokenName();
 	};
 }

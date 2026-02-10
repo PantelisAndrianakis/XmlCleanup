@@ -55,104 +55,50 @@ namespace QuickXml
 
 		bool isIdentAttribute(std::string attr);
 
-		/**
-		 * Adds an EOL char to output stream.
-		 */
+		// Adds an EOL char to output stream.
 		void writeEOL();
 
-		/**
-		 * Write indentations to output stream. The indentation depends on indentLevel variable.
-		 */
+		// Write indentations to output stream. The indentation depends on indentLevel variable.
 		void writeIndentation();
 
-		/**
-		 * Adds a custom string into output stream. The string can be added several times by
-		 * specifying the num parameter.
-		 * @param str The string to add.
-		 * @param num The number of times the str should be added.
-		 */
+		// Adds a custom string into output stream. The string can be added several times by specifying the num parameter.
 		void writeElement(std::string str, size_t num = 1);
 
-		/**
-		 * Change the current indentLevel. The function maintains the level in limits [0 .. params.maxIndentLevel].
-		 * @param change The direction of change. Value +1 increase the indent level; value -1 decrease the indent level.
-		 */
+		// Change the current indentLevel. The function maintains the level in limits [0 .. params.maxIndentLevel].
 		void updateIndentLevel(int change);
 
 	public:
-		/**
-		 * Constructor.
-		 * @param data The source data.
-		 * @param length The source data length.
-		 */
+		// Constructor.
 		XmlFormatter(const char* data, size_t length);
 
-		/**
-		 * Constructor.
-		 * @param data The source data.
-		 * @param length The source data length.
-		 * @param params The formatter params.
-		 */
+		// Constructor.
 		XmlFormatter(const char* data, size_t length, XmlFormatterParamsType params);
 
-		/**
-		 * Destructor.
-		 */
+		// Destructor.
 		~XmlFormatter();
 
-		/**
-		 * Initialize the formatter with input data.
-		 * @param data The source data.
-		 * @param length The source data length.
-		 */
+		// Initialize the formatter with input data.
 		void init(const char* data, size_t length);
 
-		/**
-		 * Initialize the formatter with input data.
-		 * @param data The source data.
-		 * @param length The source data length.
-		 * @param params The formatter params.
-		 */
+		// Initialize the formatter with input data.
 		void init(const char* data, size_t length, XmlFormatterParamsType params);
 
-		/**
-		 * Make internal parameters ready for formatting.
-		 */
+		// Make internal parameters ready for formatting.
 		void reset();
 
-		/**
-		 * Generates a string containing a list of recognized tokens.
-		 * This method has no other goal that help for debug.
-		 * @param separator The tokens names separator (default is '/').
-		 * @param detailed Indicates that output should include data.
-		 * @return A string-representation of all data tokens.
-		 */
+		// Generates a string containing a list of recognized tokens. This method has no other goal that help for debug.
 		std::string debugTokens(std::string separator = "/", bool detailed = false);
 
-		/**
-		 * Performs linearize formatting.
-		 * @return A reference string stream containing the formatted string.
-		 */
+		// Performs linearize formatting.
 		std::stringstream* linearize();
 
-		/**
-		 * Performs pretty print formatting.
-		 * @return A reference string stream containing the formatted string.
-		 */
+		// Performs pretty print formatting.
 		std::stringstream* prettyPrint();
 
-		/**
-		 * Construct the path of given position.
-		 * @param position The reference position to construct path for.
-		 * @param xpathMode The xpath extraction mode.
-		 * @return The constructed path.
-		 */
+		// Construct the path of given position.
 		std::stringstream* currentPath(size_t position, int xpathMode = XPATH_MODE_WITHNAMESPACE);
 
-		/**
-		 * Construct a default formatter parameters object.
-		 * @return A default parameters set for formatter.
-		 */
+		// Construct a default formatter parameters object.
 		static XmlFormatterParamsType getDefaultParams();
 	};
 }

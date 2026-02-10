@@ -234,7 +234,7 @@ namespace QuickXml
 					break;
 
 				case XmlTokenType::TagClosing:
-					// </ns:sample
+					// "</ns:sample".
 					if (!applyAutoclose)
 					{
 						lastAppliedTokenType = XmlTokenType::TagClosing;
@@ -300,7 +300,7 @@ namespace QuickXml
 			switch (token.type)
 			{
 				case XmlTokenType::TagOpening:
-					// <ns:sample
+					// "<ns:sample".
 					currTagNameLength = token.size;
 					if (this->params.indentOnly)
 					{
@@ -339,7 +339,7 @@ namespace QuickXml
 					break;
 
 				case XmlTokenType::TagClosing:
-					// </ns:sample
+					// "</ns:sample".
 					if (!applyAutoclose)
 					{
 						this->updateIndentLevel(-1);
@@ -454,7 +454,7 @@ namespace QuickXml
 
 				case XmlTokenType::DeclarationBeg:
 				case XmlTokenType::DeclarationSelfClosing:
-					// <!...[
+					// "<!...[".
 					if (this->params.indentOnly)
 					{
 						if (lastTextHasLineBreaks)

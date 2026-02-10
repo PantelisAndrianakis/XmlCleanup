@@ -135,7 +135,7 @@ namespace QuickXml
 				// @TODO: Prevent reading outside chars buffer.
 				if (cursor[1] == '?')
 				{
-					// <?xml ...?>
+					// "<?xml ...?>".
 					// Let's leave it untouched.
 					this->currcontext.inOpeningTag = false;
 					this->currcontext.inClosingTag = false;
@@ -151,7 +151,7 @@ namespace QuickXml
 				}
 				else if (cursor[1] == '!' && cursor[2] == '-' && cursor[3] == '-')
 				{
-					// <!--
+					// "<!--".
 					// Let's leave it untouched.
 					this->currcontext.inOpeningTag = false;
 					this->currcontext.inClosingTag = false;
@@ -159,7 +159,7 @@ namespace QuickXml
 				}
 				else if (cursor[1] == '!' && cursor[2] == '[' && cursor[3] == 'C' && cursor[4] == 'D' && cursor[5] == 'A' && cursor[6] == 'T' && cursor[7] == 'A' && cursor[8] == '[')
 				{
-					// <![CDATA[
+					// "<![CDATA[".
 					// Let's leave it untouched.
 					this->currcontext.inOpeningTag = false;
 					this->currcontext.inClosingTag = false;
@@ -188,7 +188,7 @@ namespace QuickXml
 				}
 				else if (cursor[1] == '/')
 				{
-					// </ns:sample
+					// "</ns:sample".
 					this->currcontext.inOpeningTag = false;
 					this->currcontext.inClosingTag = true;
 					if (!this->preserveSpace.empty())

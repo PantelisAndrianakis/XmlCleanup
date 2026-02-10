@@ -70,12 +70,7 @@ std::string normalizeLineEndings(const std::string& content)
 	return finalResult;
 }
 
-/**
- * Formats single-line XML comments to ensure consistent spacing.
- * Adds one space after <!-- and one space before --> for better readability.
- * Normalizes multiple consecutive spaces within comment text to a single space.
- * Only affects single-line comments; multi-line comments remain unchanged.
- */
+// Formats single-line XML comments to ensure consistent spacing. Adds one space after <!-- and one space before --> for better readability. Normalizes multiple consecutive spaces within comment text to a single space. Only affects single-line comments; multi-line comments remain unchanged.
 std::string formatSingleLineComments(const std::string& xml)
 {
 	std::string result = xml;

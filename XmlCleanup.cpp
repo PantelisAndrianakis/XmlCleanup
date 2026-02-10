@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 
-// Function to find all XML and XSD files in a directory and its subdirectories.
+// Find all XML and XSD files in a directory and its subdirectories.
 std::vector<std::filesystem::path> findXmlAndXsdFiles(const std::filesystem::path& directoryPath)
 {
 	std::vector<std::filesystem::path> xmlFiles;
@@ -22,7 +22,7 @@ std::vector<std::filesystem::path> findXmlAndXsdFiles(const std::filesystem::pat
 		}
 
 		// Recursively iterate through the directory and subdirectories.
-		for (const auto& entry : std::filesystem::recursive_directory_iterator(directoryPath))
+		for (const std::filesystem::recursive_directory_iterator::value_type& entry : std::filesystem::recursive_directory_iterator(directoryPath))
 		{
 			if (entry.is_regular_file())
 			{
@@ -143,7 +143,7 @@ int main(int argc, char* argv[])
 
 		// Process each file with default settings.
 		int successCount = 0;
-		for (const auto& file : xmlFiles)
+		for (const std::filesystem::path& file : xmlFiles)
 		{
 			if (processXmlFile(file, indentStr, eolStr, indentOnly, autoCloseEmptyElements))
 			{

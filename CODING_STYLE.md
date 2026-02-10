@@ -1,422 +1,181 @@
-# C++ Coding Style Guide
+# Coding Style Guide
 
-This document describes the coding conventions for C++ projects.
-
-## Core Principles
-
-- **Clarity over cleverness**: Code should be immediately understandable.
-- **Consistent formatting**: Use the same patterns throughout the codebase.
-- **Explicit over implicit**: Prefer explicit types, clear variable names, and explicit error handling.
-- **Simplicity over forced symmetry**: Don't force vertical alignment when a simple line works fine.
-- **Allman style**: Opening braces on new lines for visual symmetry and easy scanning.
-- **Performance-conscious**: Write efficient C++ code but prioritize readability first.
-- **RAII and modern C++**: Embrace modern C++ features (C++17/20) and resource management patterns.
+This document describes the C++-specific coding conventions for this project.
 
 ---
 
-## Formatting
+## Core Principles
 
-### Indentation
-- **Use tabs for indentation** (not spaces).
-- Configure your editor to use tabs.
-- Continuation lines should be indented with one additional tab.
+These are the core principles that define how we write code.
 
-### Braces and Brackets Placement
-- **Place opening braces `{` on a new line** for:
-  - Function definitions.
-  - Class definitions.
-  - Struct definitions.
-  - Enum definitions.
-  - Namespace blocks.
-  - If/else blocks.
-  - For/while/do-while loops.
-  - Switch statements.
-  - Try/catch blocks.
-  - Multi-line lambda expressions.
+### 1. TYPE INFERENCE - CONTROLLED USE OF `auto`
 
-**Examples:**
+Type inference with `auto` is **tightly controlled** but not forbidden.
 
+**Core Principle:** Code must be understandable without IDE assistance. The reader is more important than the writer.
+
+**Allowed - Type is obvious from right-hand side:**
 ```cpp
-// Function definition.
-void processFile(const std::filesystem::path& sourcePath, const std::filesystem::path& targetPath, const ProcessingOptions& options)
-{
-	// Function body.
-}
+// ALLOWED - Constructor visible.
+auto players = std::vector<Player>();
+auto stream = std::make_unique<FileStream>(path);
+auto buffer = std::make_shared<Buffer>(1024);
 
-// Class definition.
-class FileProcessor
-{
-private:
-	std::string filePath;
-	size_t fileSize;
-
-public:
-	FileProcessor(const std::string& path);
-	~FileProcessor();
-	
-	void process();
-	size_t getSize() const;
-};
-
-// Struct definition.
-struct ProcessingResult
-{
-	size_t originalSize;
-	size_t newSize;
-	double reductionPercent;
-};
-
-// Enum definition.
-enum class ProcessingMode
-{
-	Fast,
-	Balanced,
-	Quality
-};
-
-// Namespace.
-namespace QuickXml
-{
-	class XmlFormatter
-	{
-		// Class implementation.
-	};
-}
-
-// If/else blocks.
-if (args.force && args.skip)
-{
-	std::cerr << "Cannot use --force and --skip together" << std::endl;
-	return 1;
-}
-else
-{
-	// Alternative path.
-}
-
-// For loops.
-for (const auto& file : files)
-{
-	std::cout << "Processing: " << file.string() << std::endl;
-}
-
-// Switch statements.
-switch (priority)
-{
-	case 1:
-	case 2:
-	case 3:
-		std::cout << "High priority" << std::endl;
-		break;
-	
-	case 4:
-	case 5:
-		std::cout << "Medium priority" << std::endl;
-		break;
-	
-	default:
-		std::cout << "Low priority" << std::endl;
-		break;
-}
+// ALLOWED - Iterator types (verbose to write).
+auto it = players.begin();
+auto end = players.end();
 ```
 
-**Exception - Single-line lambdas:**
-Single-line lambdas can have braces on the same line:
-
+**Forbidden - Meaning is hidden:**
 ```cpp
-std::sort(files.begin(), files.end(), [](const auto& a, const auto& b) { return a.size() < b.size(); });
+// WRONG - Return type unclear.
+auto result = calculateValue(x, y, z);
+auto data = getData();
 
-auto isValid = [](int x) { return x >= 0 && x <= 100; };
+// CORRECT - Explicit types are self-documenting.
+int result = calculateValue(x, y, z);
+std::vector<uint8_t> data = getData();
 ```
 
-**Multi-line lambdas:**
-Multi-line lambdas should have opening brace on new line:
+**Rule:** If understanding the type requires jumping to a definition, `auto` is forbidden.
+
+**Why?** Code must be understandable without IDE assistance. The reader is more important than the writer.
+
+### 2. SINGLE-LINE CODE - NO WRAPPING
+
+**Code must fit in the reader's working memory. If it does not fit on one line, it does not fit in the head either.**
+
+Control flow, conditions, and signatures must stay on single lines. This enforces **locality of understanding**: all required information must be visible in one visual frame.
 
 ```cpp
-std::transform(files.begin(), files.end(), std::back_inserter(results), [&options](const auto& file)
-{
-	auto result = processFile(file, options);
-	return result.success;
-});
-
-auto validator = [&validExtensions](const std::filesystem::path& path)
-{
-	auto ext = path.extension().string();
-	return std::find(validExtensions.begin(), validExtensions.end(), ext) != validExtensions.end();
-};
-```
-
-### Function Signatures
-- **Write all parameters on a single line whenever possible**.
-- Only break to multiple lines if the signature exceeds ~100-120 characters.
-- When breaking, put each parameter on its own line with proper indentation.
-
-**Good:**
-```cpp
+// GOOD - all parameters visible, even if line is long.
 void processData(const std::string& source, const std::string& target, bool validate, int quality, ProcessingMode mode)
 {
-	// Implementation.
+	// You can see everything. No hidden coupling. No indirection.
 }
-```
 
-**When wrapping is necessary:**
-```cpp
-void processComplexOperation(
-	const std::filesystem::path& sourcePath,
-	const std::filesystem::path& targetPath,
-	const ProcessingOptions& options,
-	std::function<void(const std::string&)> callback
-)
+// WRONG - wrapping hides complexity.
+void processData(
+	const std::string& source,
+	const std::string& target,
+	bool validate,
+	int quality,
+	ProcessingMode mode)
 {
-	// Implementation.
+	// Now you have to scan vertically. Context is distributed.
 }
-```
 
-### Line Length
-- Aim for **120 characters maximum** per line.
-- Break longer lines at logical boundaries (after commas, operators, etc.).
-- Use continuation indentation (one tab) for wrapped lines.
+// ALSO WRONG - abstraction hides parameters.
+struct ProcessingConfig { /* ... */ };
+void processData(const ProcessingConfig& config)
+{
+	// Now you can't see what the function needs.
+	// Coupling is hidden. Debugging is harder.
+}
 
-### When to Break Lines
-**DO break lines when:**
-- Line genuinely exceeds 120 characters.
-- Complex nested expressions become hard to parse.
-- Breaking at logical boundaries significantly improves readability.
-
-**DON'T break lines when:**
-- A line fits comfortably within 120 characters.
-- Forcing vertical alignment makes code harder to scan.
-- Breaking adds no clarity.
-- Conditions or expressions are straightforward and readable on one line.
-
-**Examples:**
-
-```cpp
-// Good - simple and clear, stays on one line.
+// CORRECT - condition visible.
 if (cursor[1] == '!' && cursor[2] == '[' && cursor[3] == 'C' && cursor[4] == 'D')
 {
 	handleCDATA();
 }
-
-// Good - fits on one line.
-auto result = calculateValue(x, y, z);
-
-// Bad - forced vertical for no benefit.
-auto result = calculateValue(
-	x,
-	y,
-	z
-);
-
-// Bad - breaking short condition unnecessarily.
-if (isValid &&
-	isReady)
-{
-	process();
-}
-
-// Good - long line broken for readability.
-auto r = quantizeChannel(pixel[0], factor);
-auto g = quantizeChannel(pixel[1], factor);
-auto b = quantizeChannel(pixel[2], factor);
-resultBuffer.setPixel(x, y, Color{r, g, b, pixel[3]});
-
-// Bad - unreadable single line (140+ chars).
-resultBuffer.setPixel(x, y, Color{quantizeChannel(pixel[0], factor), quantizeChannel(pixel[1], factor), quantizeChannel(pixel[2], factor), pixel[3]});
 ```
 
-**Principle:** Simplicity trumps symmetry. Keep code on single lines when readable. Break lines only when it genuinely helps readability or exceeds the 120-character limit.
+**Why single-line?**
+- **Visibility over abstraction** - You can see all parameters/conditions directly. No indirection. No hidden coupling.
+- Your brain has ~7±2 working memory slots. Single-line keeps everything in one frame.
+- Wrapping distributes complexity vertically - makes you scan and reconstruct context
+- Creating parameter objects to "fix" long lines makes things WORSE: hidden coupling, loss of transparency, harder debugging
+- A long single line is honest. It shows the real complexity. That's good.
 
----
+**Don't wrap. Don't hide. If it's long, it's long. That's the truth.**
 
-## Comments
-
-### General Comment Style
-- **Begin all comment sentences with a capital letter**.
-- **End all comment sentences with a period**.
-- Use complete sentences for clarity.
-- Use `//` for single-line comments.
-- Use `/* */` for multi-line comments or block documentation.
-
-**Examples:**
+**Constructor initialization lists follow the same rule - single line:**
 ```cpp
-// Calculate the size reduction percentage.
-double reductionPct = (1.0 - (static_cast<double>(newSize) / originalSize)) * 100.0;
-
-// Safety check to prevent infinite loops.
-if (length > 10'000'000)
+// CORRECT - initialization list on single line.
+XmlIndenter::XmlIndenter(const std::string& content) : xmlContent(content), indentStr("\t"), eolStr("\n"), indentOnly(true)
 {
-	break;
 }
 
-/*
- * This is a multi-line comment explaining
- * a complex algorithm or process flow.
- */
-```
-
-### Documentation Comments
-Use Javadoc-style `/** */` for documenting functions, classes, and public interfaces:
-
-```cpp
-/**
- * Processes a file using a combination of techniques.
- * If validation is enabled, performs additional checks before processing.
- * Otherwise, applies standard processing with the specified quality level.
- * @param sourcePath Path to the source file.
- * @param targetPath Path where the processed file will be saved.
- * @param validate Whether to perform validation checks.
- * @return A ProcessingResult containing statistics about the operation.
- */
-ProcessingResult processFile(
-	const std::filesystem::path& sourcePath,
-	const std::filesystem::path& targetPath,
-	bool validate
-)
+// WRONG - wrapping distributes context vertically.
+XmlIndenter::XmlIndenter(const std::string& content)
+	: xmlContent(content),
+	  indentStr("\t"),
+	  eolStr("\n"),
+	  indentOnly(true)
 {
-	// Implementation.
 }
 ```
 
-### Inline Comments
-- Use `//` followed by a space for inline comments.
-- Place inline comments on the same line only when they're brief and clarify specific values.
-- When explaining code, place comments on their own line above the code.
+**Why?** Same reasons as function parameters and conditions. You need to see all initializers at once. Wrapping forces you to scan and reconstruct context. A long initialization list shows the real complexity - that's honest.
 
-**Good:**
+### 3. ALLMAN BRACES - ALWAYS ON NEW LINE
+Opening braces `{` ALWAYS go on a new line. No exceptions (except single-line lambdas).
+
 ```cpp
-Color newPixel
-{
-	quantizeChannel(oldPixel.r, factor),
-	quantizeChannel(oldPixel.g, factor),
-	quantizeChannel(oldPixel.b, factor),
-	std::clamp(oldPixel.a, 0, 255) // Keep alpha unchanged.
-};
+// WRONG.
+if (condition) {
+	doSomething();
+}
 
-// Distribute error to neighboring pixels (Floyd-Steinberg pattern).
-if (x + 1 < width)
+// CORRECT.
+if (condition)
 {
-	for (int c = 0; c < 3; ++c)
-	{
-		workingBuffer[y][x + 1][c] += (error[c] * 7) / 16;
-	}
+	doSomething();
 }
 ```
 
-**Avoid:**
-```cpp
-int x = 5; // Set x to 5.
-```
+**Why?** Visual symmetry makes code easier to scan and spot errors.
 
----
+### 4. TABS FOR INDENTATION - NOT SPACES
+Use tabs, period. Configure your editor properly.
 
-## Headers and Includes
+Why? Because a single tab character is the true, unambiguous representation of a single indentation level. Spaces are a visual approximation; tabs are the logical unit.
 
-### Header Guards
-Use `#pragma once` for header guards (modern and simpler):
+### 5. COMPLETE SENTENCES IN COMMENTS
+Comments start with capital letter, end with period.
 
 ```cpp
-#pragma once
+// WRONG.
+// calculate average value
 
-#include <string>
-#include <vector>
-
-class MyClass
-{
-	// Class definition.
-};
+// CORRECT.
+// Calculate the average value.
 ```
 
-**Alternative - Traditional header guards:**
-If `#pragma once` is not available, use traditional guards with descriptive names:
-
-```cpp
-#ifndef PROJECT_NAME_FILE_NAME_H
-#define PROJECT_NAME_FILE_NAME_H
-
-// Header content.
-
-#endif // PROJECT_NAME_FILE_NAME_H
-```
-
-### Include Ordering
-Organize includes in the following order, with blank lines between groups:
-
-1. Corresponding header (for `.cpp` files)
-2. C++ standard library headers (alphabetically)
-3. Third-party library headers (alphabetically)
-4. Project headers (alphabetically)
-
-**Example (.cpp file):**
-```cpp
-#include "XmlIndenter.h"
-
-#include <algorithm>
-#include <filesystem>
-#include <fstream>
-#include <iostream>
-#include <sstream>
-#include <string>
-#include <vector>
-
-#include <rapidxml/rapidxml.hpp>
-
-#include "XmlFormatter.h"
-#include "XmlParser.h"
-```
-
-**Example (.h file):**
-```cpp
-#pragma once
-
-#include <memory>
-#include <string>
-#include <vector>
-
-#include "Types.h"
-```
-
-### Include Style
-- Use angle brackets `< >` for standard library and third-party headers.
-- Use quotes `" "` for project headers.
-
-```cpp
-#include <iostream>      // Standard library.
-#include <boost/asio.hpp> // Third-party library.
-#include "MyClass.h"     // Project header.
-```
+**Why?** Professional code looks professional. We're not writing text messages.
 
 ---
 
 ## Naming Conventions
 
-### Variables and Functions
-Use **camelCase** for variables, function parameters, and member variables:
+Get the names right or the code gets rejected.
+
+### Variables, Functions, and Members
+Use **camelCase**:
 
 ```cpp
-std::string sourcePath = "./file.txt";
-size_t totalSize = 0;
-bool isValid = false;
+int totalCount = 0;
+std::string fileName = "data.txt";
 
-void calculateStatistics(const std::vector<uint8_t>& data, size_t width, size_t height)
+void processFile(const std::string& path)
 {
-	// Implementation.
+	int bufferSize = 1024;
 }
 ```
 
-### Classes, Structs, and Enums
+### Classes, Structs, Enums
 Use **PascalCase**:
 
 ```cpp
 class FileProcessor
 {
-	// Class implementation.
+	// Implementation.
 };
 
 struct ProcessingResult
 {
-	size_t originalSize;
-	size_t newSize;
+	int originalSize;
+	int newSize;
 };
 
 enum class ProcessingMode
@@ -425,134 +184,343 @@ enum class ProcessingMode
 	Balanced,
 	Quality
 };
-```
-
-### Enum Values
-Use **PascalCase** for enum class values:
-
-```cpp
-enum class Color
-{
-	Red,
-	Green,
-	Blue
-};
-
-// Usage.
-auto myColor = Color::Red;
 ```
 
 ### Constants and Macros
 Use **SCREAMING_SNAKE_CASE**:
 
 ```cpp
-const char* APP_NAME = "Application";
-const char* APP_VERSION = "1.0.0";
-constexpr size_t MAX_BUFFER_SIZE = 10'000'000;
+const int MAX_BUFFER_SIZE = 10'000'000;
+const std::string APP_NAME = "Application";
 
-#define XPATH_MODE_BASIC            (1 << 0)
-#define XPATH_MODE_WITHNAMESPACE    (1 << 1)
+#define DEFAULT_TIMEOUT 30
 ```
-
-### Namespaces
-Use **PascalCase** or **lowercase**:
-
-```cpp
-namespace QuickXml
-{
-	class XmlFormatter
-	{
-		// Implementation.
-	};
-}
-
-namespace utils
-{
-	void helperFunction();
-}
-```
-
-### Member Variables
-Use **camelCase** without prefix:
-
-```cpp
-class MyClass
-{
-private:
-	std::string fileName;     // Use camelCase.
-	size_t fileSize;          // No m_ prefix.
-	bool isInitialized;
-
-public:
-	// Public interface.
-};
-```
-
-**Note:** Some codebases use `m_` prefix for members, but this style guide prefers clean camelCase.
 
 ---
 
-## Type Declarations and Usage
+## Formatting Rules
 
-### Type Inference with `auto`
-Use `auto` when the type is obvious from context or when it improves readability:
+### Indentation
+- **Tabs only** - no spaces for indentation.
+- One tab per level.
 
-**Good uses of auto:**
+### Braces Placement
+Opening brace `{` on new line for:
+- Functions
+- Classes, structs, enums
+- Namespaces
+- If/else blocks
+- Loops (for, while, do-while)
+- Switch statements
+- Try/catch blocks
+- Multi-line lambdas
+
+**Examples:**
+
 ```cpp
-auto result = calculateValue(x, y);  // Return type clear from function name.
-auto it = myMap.find(key);           // Iterator types are verbose.
-auto lambda = [](int x) { return x * 2; };
-
-for (const auto& item : collection)  // Avoids repeating long type names.
+void processFile(const std::string& path)
 {
-	// Process item.
+	// Function body.
+}
+
+class FileProcessor
+{
+	// Class body.
+};
+
+if (condition)
+{
+	// If body.
+}
+
+for (int i = 0; i < count; i++)
+{
+	// Loop body.
 }
 ```
 
-**Avoid auto when type is not obvious:**
-```cpp
-auto x = processData(); // What type is x? Not clear.
+**Exception - Single-line lambdas:**
 
-// Better - be explicit.
-ProcessingResult x = processData();
+```cpp
+std::sort(files.begin(), files.end(), [](const File& a, const File& b) { return a.size < b.size; });
+```
+
+### Spacing Rules
+
+**Between functions - one blank line:**
+```cpp
+void functionOne()
+{
+	// Implementation.
+}
+
+void functionTwo()
+{
+	// Implementation.
+}
+```
+
+**Within functions - blank lines separate logic:**
+```cpp
+void processData()
+{
+	// Section 1: Read data.
+	FileData data = readFile(path);
+	size_t size = data.size();
+	
+	// Section 2: Process data.
+	ProcessedData processed = transform(data);
+	OptimizedData optimized = optimize(processed);
+	
+	// Section 3: Write results.
+	writeOutput(optimized);
+}
+```
+
+**Between independent control structures - blank lines:**
+```cpp
+// CORRECT - blank lines separate independent checks.
+if (p != std::string::npos)
+{
+	key = attr.key.substr(p + 1);
+}
+
+if (this->params.dumpIdAttributesName)
+{
+	out_attr << key << "=" << attr.val;
+}
+```
+
+**Related if/else stays together - no blank lines:**
+```cpp
+if (condition1)
+{
+	doSomething();
+}
+else if (condition2)
+{
+	doSomethingElse();
+}
+else
+{
+	doDefault();
+}
+```
+
+**Critical spacing rules:**
+- **Never more than one blank line** anywhere.
+- **No trailing spaces** at end of lines.
+- **No excessive spacing** like `if (x == 0)   `.
+
+---
+
+## Control Flow
+
+### When to Use If vs Switch
+
+**Use if/else for 1-2 comparisons:**
+```cpp
+if (priority == 1)
+{
+	processHighPriority();
+}
+else
+{
+	processNormalPriority();
+}
+```
+
+**Use switch for 3+ comparisons:**
+```cpp
+switch (priority)
+{
+	case 1:
+	case 2:
+	case 3:
+		processHighPriority();
+		break;
+	
+	case 4:
+	case 5:
+		processMediumPriority();
+		break;
+	
+	default:
+		processLowPriority();
+		break;
+}
+```
+
+### If-Else Statements
+- **Always use braces** - even for single statements.
+- **Keep conditions on single line** - no wrapping.
+- **Include else only when both branches are meaningful** - early returns preferred for guard clauses.
+
+```cpp
+// Good - simple condition on single line.
+if (cursor[1] == '!' && cursor[2] == '[' && cursor[3] == 'C' && cursor[4] == 'D')
+{
+	handleCDATA();
+}
+
+// Good - complex condition still on single line (even if long).
+if (player.isAlive() && !player.isStunned() && player.hasMana(50) && target.isVisible() && target.isInRange(player, 1200))
+{
+	castSpell();
+}
+
+// Good - early return for guard clause (no else needed).
+if (!isValid())
+{
+	return;
+}
+
+processValidData();
+
+// Good - else when both branches are meaningful.
+if (fileExists(path))
+{
+	loadFromFile(path);
+}
+else
+{
+	createDefaultFile(path);
+}
+
+// WRONG - no braces.
+if (condition)
+	doSomething();
+```
+
+### Switch Statements
+- **Always include default case**.
+- **Always include break** (unless fall-through is intentional and commented).
+- **Only use braces when declaring variables** inside a case.
+
+```cpp
+switch (mode)
+{
+	case ProcessingMode::Fast:
+		applyFastProcessing();
+		break;
+	
+	case ProcessingMode::Quality:
+	{
+		// Braces only because we declare a variable.
+		std::string config = loadQualityConfig();
+		applyQualityProcessing(config);
+		break;
+	}
+	
+	default:
+		std::cerr << "Unknown mode" << std::endl;
+		break;
+}
+```
+
+### Loops
+Use the appropriate loop type:
+
+```cpp
+// For loops - known iteration count.
+for (int i = 0; i < count; i++)
+{
+	processItem(i);
+}
+
+// Range-based for - iterating collections.
+for (const std::filesystem::path& file : files)
+{
+	processFile(file);
+}
+
+// While loops - condition-based iteration.
+while (!queue.empty())
+{
+	std::string item = queue.front();
+	queue.pop();
+	processItem(item);
+}
+```
+
+---
+
+## Type Declarations
+
+### The Rule: Controlled Use of `auto`
+
+Type inference with `auto` is allowed when the type is obvious, forbidden when meaning is hidden.
+
+**Use `auto` when the type is obvious:**
+```cpp
+// Good - constructor clearly visible.
+auto buffer = std::vector<uint8_t>(1024);
+auto file = std::make_unique<FileStream>(path);
+
+// Good - iterator types are verbose.
+auto it = container.begin();
+auto end = container.end();
+
+// Good - lambda types cannot be named.
+auto lambda = [](int x) { return x * 2; };
+```
+
+**Do NOT use `auto` when type is unclear:**
+```cpp
+// WRONG - type inference hides information.
+auto result = calculateValue(x, y, z);
+auto file = openFile(path);
+auto data = getData();
+
+// CORRECT - explicit types are self-documenting.
+int result = calculateValue(x, y, z);
+FileHandle file = openFile(path);
+std::vector<uint8_t> data = getData();
+```
+
+### Language-Required `auto`
+
+**Structured bindings (C++17) - auto is required:**
+```cpp
+auto [min, max] = std::minmax({1, 2, 3, 4, 5});
+
+for (const auto& [key, value] : myMap)
+{
+	std::cout << key << ": " << value << std::endl;
+}
+```
+
+**Generic lambdas (C++14) - auto is required:**
+```cpp
+auto printer = [](const auto& item) { std::cout << item << std::endl; };
 ```
 
 ### Const Correctness
-- Use `const` for function parameters that won't be modified.
-- Use `const` member functions for methods that don't modify object state.
-- Use `const` references to avoid unnecessary copies.
+Use `const` everywhere it applies:
 
 ```cpp
+// Const parameters.
+void process(const std::string& text, const std::vector<int>& data)
+{
+	// Use without modifying.
+}
+
+// Const member functions.
 class FileInfo
 {
-private:
-	std::string path;
-	size_t size;
-
 public:
-	// Const reference parameter.
-	FileInfo(const std::string& filePath, size_t fileSize)
-		: path(filePath), size(fileSize)
+	size_t getSize() const // Doesn't modify object.
 	{
+		return _size;
 	}
 	
-	// Const member function.
-	std::string getPath() const
-	{
-		return path;
-	}
-	
-	size_t getSize() const
-	{
-		return size;
-	}
+private:
+	size_t _size;
 };
 
-// Const reference in function parameter.
-void processFile(const FileInfo& info)
-{
-	std::cout << info.getPath() << std::endl;
-}
+// Const variables.
+const int maxRetries = 3;
+const std::string configFile = "config.xml";
 ```
 
 ### References and Pointers
@@ -571,7 +539,107 @@ int *createBuffer(size_t size);
 
 // Multiple declarations - each variable needs its own *.
 int* ptr1;
-int* ptr2;  // Not: int* ptr1, ptr2; (ptr2 would be int, not int*).
+int* ptr2; // Not: int* ptr1, ptr2; (ptr2 would be int, not int*).
+```
+
+---
+
+## Comments
+
+### General Rules
+- **Start with capital letter**.
+- **End with period**.
+- **Use complete sentences**.
+- **Use `//` for single-line** comments.
+- **Use `/* */` for multi-line** comments.
+
+```cpp
+// Calculate the size reduction percentage.
+double reductionPct = (1.0 - (static_cast<double>(newSize) / originalSize)) * 100.0;
+
+/*
+ * This is a multi-line comment explaining
+ * a complex algorithm or process flow.
+ */
+```
+
+### Documentation Comments
+Use Javadoc-style `/** */` for public APIs:
+
+```cpp
+/**
+ * Processes a file using the specified options.
+ * @param sourcePath Path to the source file.
+ * @param targetPath Path where output will be saved.
+ * @param validate Whether to perform validation checks.
+ * @return ProcessingResult with statistics.
+ */
+ProcessingResult processFile(const std::filesystem::path& sourcePath, const std::filesystem::path& targetPath, bool validate)
+{
+	// Implementation.
+}
+```
+
+### Inline Comments
+Only when clarifying non-obvious code:
+
+```cpp
+Color newPixel
+{
+	quantizeChannel(oldPixel.r, factor),
+	quantizeChannel(oldPixel.g, factor),
+	quantizeChannel(oldPixel.b, factor),
+	oldPixel.a // Keep alpha unchanged.
+};
+```
+
+**Don't state the obvious:**
+```cpp
+// WRONG - obvious comment.
+int x = 5; // Set x to 5.
+
+// CORRECT - only comment when adding value.
+int retryCount = 5; // Empirically determined optimal retry count.
+```
+
+---
+
+## Headers and Includes
+
+### Header Guards
+Use `#pragma once`:
+
+```cpp
+#pragma once
+
+#include <string>
+#include <vector>
+
+class MyClass
+{
+	// Class definition.
+};
+```
+
+### Include Ordering
+Four groups, blank line between each:
+
+1. Corresponding header (for .cpp files)
+2. Standard library headers
+3. Third-party library headers
+4. Project headers
+
+```cpp
+#include "FileProcessor.h" // Corresponding header.
+
+#include <string> // Standard library.
+#include <vector>
+#include <filesystem>
+
+#include <boost/algorithm.hpp> // Third-party.
+
+#include "utils/helpers.h" // Project headers.
+#include "core/processor.h"
 ```
 
 ---
@@ -629,7 +697,7 @@ public:
 ### Constructor Initialization Lists
 Always use initialization lists for constructors.
 
-**Keep the initialization list on the same line as the constructor signature whenever possible:**
+**Keep the initialization list on the same line as the constructor signature:**
 
 ```cpp
 // Good - single-line initialization list.
@@ -643,24 +711,16 @@ XmlIndenter::XmlIndenter(const std::string& xmlContent) : xmlContent(xmlContent)
 {
 }
 
-// Only break to multiple lines if truly exceeding ~120 characters.
-VeryLongClassName::VeryLongClassName(const std::string& veryLongParameterName, int anotherParameter, bool yetAnotherOne)
-	: memberVariableWithLongName(veryLongParameterName),
-	  anotherMemberVariable(anotherParameter),
-	  booleanMember(yetAnotherOne)
-{
-}
-
 // Avoid - assignment in constructor body.
 FileProcessor::FileProcessor(const std::string& path, size_t size)
 {
-	filePath = path;      // Less efficient.
+	filePath = path; // Less efficient.
 	fileSize = size;
 	isInitialized = false;
 }
 ```
 
-**Principle:** Keep initialization lists on a single line unless they genuinely exceed ~120 characters.
+**Principle:** Keep initialization lists on a single line.
 
 ### Rule of Five / Rule of Zero
 Follow the Rule of Five or Rule of Zero:
@@ -676,554 +736,156 @@ private:
 	std::vector<std::string> data;
 	
 public:
-	// No need to define destructor, copy/move constructors/operators.
-	// Compiler-generated versions work correctly.
+	// No need to define copy/move constructors, destructor.
+	// Compiler-generated ones work perfectly.
 };
 ```
 
-**Rule of Five (when manual resource management is needed):**
+**Rule of Five (when managing resources):**
 If you define one, define all five:
 
 ```cpp
-class ResourceHolder
+class ResourceManager
 {
 private:
-	int* resource;
-	
+	int* buffer;
+	size_t size;
+
 public:
-	// Constructor.
-	ResourceHolder(int value) : resource(new int(value)) {}
-	
 	// Destructor.
-	~ResourceHolder()
+	~ResourceManager()
 	{
-		delete resource;
+		delete[] buffer;
 	}
 	
 	// Copy constructor.
-	ResourceHolder(const ResourceHolder& other)
-		: resource(new int(*other.resource))
+	ResourceManager(const ResourceManager& other) : size(other.size)
 	{
+		buffer = new int[size];
+		std::copy(other.buffer, other.buffer + size, buffer);
 	}
 	
 	// Copy assignment.
-	ResourceHolder& operator=(const ResourceHolder& other)
+	ResourceManager& operator=(const ResourceManager& other)
 	{
 		if (this != &other)
 		{
-			delete resource;
-			resource = new int(*other.resource);
+			delete[] buffer;
+			size = other.size;
+			buffer = new int[size];
+			std::copy(other.buffer, other.buffer + size, buffer);
 		}
 		return *this;
 	}
 	
 	// Move constructor.
-	ResourceHolder(ResourceHolder&& other) noexcept
-		: resource(other.resource)
+	ResourceManager(ResourceManager&& other) noexcept : buffer(other.buffer), size(other.size)
 	{
-		other.resource = nullptr;
+		other.buffer = nullptr;
+		other.size = 0;
 	}
 	
 	// Move assignment.
-	ResourceHolder& operator=(ResourceHolder&& other) noexcept
+	ResourceManager& operator=(ResourceManager&& other) noexcept
 	{
 		if (this != &other)
 		{
-			delete resource;
-			resource = other.resource;
-			other.resource = nullptr;
+			delete[] buffer;
+			buffer = other.buffer;
+			size = other.size;
+			other.buffer = nullptr;
+			other.size = 0;
 		}
 		return *this;
 	}
 };
-```
-
----
-
-## Modern C++ Features
-
-### Smart Pointers
-Prefer smart pointers over raw pointers for ownership:
-
-```cpp
-// Use std::unique_ptr for exclusive ownership.
-auto parser = std::make_unique<XmlParser>(data, length);
-
-// Use std::shared_ptr for shared ownership.
-auto formatter = std::make_shared<XmlFormatter>(data, length);
-
-// Avoid raw pointers for ownership.
-XmlParser* parser = new XmlParser(data, length);  // Don't do this.
-// ... (easy to forget delete).
-```
-
-### Range-Based For Loops
-Use range-based for loops when possible:
-
-```cpp
-// Good - range-based for.
-std::vector<std::string> files = getFiles();
-for (const auto& file : files)
-{
-	process(file);
-}
-
-// Modifying elements.
-for (auto& file : files)
-{
-	file = normalize(file);
-}
-
-// When you need the index, use traditional loop or enumerate.
-for (size_t i = 0; i < files.size(); ++i)
-{
-	std::cout << i << ": " << files[i] << std::endl;
-}
-```
-
-### Lambdas
-Use lambdas for short, localized functions:
-
-```cpp
-// Single-line lambda.
-auto isPositive = [](int x) { return x > 0; };
-
-// Multi-line lambda with captures.
-auto processor = [&options, &results](const std::string& file)
-{
-	auto result = processFile(file, options);
-	results.push_back(result);
-	return result.success;
-};
-
-// Generic lambda (C++14).
-auto printer = [](const auto& item)
-{
-	std::cout << item << std::endl;
-};
-```
-
-### Structured Bindings (C++17)
-Use structured bindings to unpack tuples and pairs:
-
-```cpp
-std::map<std::string, int> myMap = {{"a", 1}, {"b", 2}};
-
-for (const auto& [key, value] : myMap)
-{
-	std::cout << key << ": " << value << std::endl;
-}
-
-auto [min, max] = std::minmax({1, 2, 3, 4, 5});
-```
-
-### `std::optional` (C++17)
-Use `std::optional` for values that may not exist:
-
-```cpp
-std::optional<std::string> findFile(const std::string& name)
-{
-	// Search logic.
-	if (found)
-	{
-		return filename;
-	}
-	return std::nullopt;
-}
-
-// Usage.
-if (auto file = findFile("config.xml"))
-{
-	std::cout << "Found: " << *file << std::endl;
-}
-else
-{
-	std::cout << "Not found" << std::endl;
-}
-```
-
-### `std::filesystem` (C++17)
-Use `std::filesystem` for file operations:
-
-```cpp
-#include <filesystem>
-
-namespace fs = std::filesystem;
-
-// Check if file exists.
-if (fs::exists(path))
-{
-	// Process file.
-}
-
-// Iterate directory.
-for (const auto& entry : fs::directory_iterator(dirPath))
-{
-	if (entry.is_regular_file())
-	{
-		std::cout << entry.path() << std::endl;
-	}
-}
-
-// Recursive directory iteration.
-for (const auto& entry : fs::recursive_directory_iterator(dirPath))
-{
-	// Process entries.
-}
 ```
 
 ---
 
 ## Error Handling
 
-### Exceptions
-Use exceptions for error handling in most cases:
+### Use Exceptions
+Prefer exceptions for error handling:
 
 ```cpp
-void readFile(const std::filesystem::path& path)
+void processFile(const std::filesystem::path& path)
 {
+	if (!std::filesystem::exists(path))
+	{
+		throw std::runtime_error("File not found: " + path.string());
+	}
+	
 	std::ifstream file(path);
 	if (!file.is_open())
 	{
-		throw std::runtime_error("Cannot open file: " + path.string());
+		throw std::runtime_error("Failed to open file: " + path.string());
 	}
 	
-	// Read file.
+	// Process file.
 }
+```
 
-// Catching exceptions.
+### RAII (Resource Acquisition Is Initialization)
+Use RAII for automatic resource management:
+
+```cpp
+// Good - RAII with smart pointers.
+std::unique_ptr<FILE, decltype(&fclose)> file(fopen("data.txt", "r"), &fclose);
+
+// Good - RAII with custom classes.
+class FileHandle
+{
+private:
+	FILE* file;
+
+public:
+	FileHandle(const char* path, const char* mode) : file(fopen(path, mode))
+	{
+		if (!file)
+		{
+			throw std::runtime_error("Failed to open file");
+		}
+	}
+	
+	~FileHandle()
+	{
+		if (file)
+		{
+			fclose(file);
+		}
+	}
+	
+	// Disable copying.
+	FileHandle(const FileHandle&) = delete;
+	FileHandle& operator=(const FileHandle&) = delete;
+};
+```
+
+### Try-Catch
+```cpp
 try
 {
-	readFile(inputPath);
-	processData();
+	ProcessingResult result = processFile(path);
+	std::cout << "Success: " << result.reductionPercent << "% reduction" << std::endl;
 }
-catch (const std::runtime_error& e)
+catch (const std::exception& e)
 {
 	std::cerr << "Error: " << e.what() << std::endl;
 	return 1;
 }
-catch (const std::exception& e)
-{
-	std::cerr << "Unexpected error: " << e.what() << std::endl;
-	return 1;
-}
-```
-
-### Error Codes (when exceptions are not suitable)
-Use error codes or `std::optional` for performance-critical code:
-
-```cpp
-enum class ErrorCode
-{
-	Success,
-	FileNotFound,
-	InvalidFormat,
-	OutOfMemory
-};
-
-struct Result
-{
-	ErrorCode code;
-	std::string message;
-	std::optional<Data> data;
-};
-
-Result processFile(const std::string& path)
-{
-	if (!fileExists(path))
-	{
-		return {ErrorCode::FileNotFound, "File not found", std::nullopt};
-	}
-	
-	// Processing logic.
-	return {ErrorCode::Success, "", processedData};
-}
-```
-
-### Resource Management (RAII)
-Always use RAII for resource management:
-
-```cpp
-// Good - RAII with smart pointers.
-{
-	auto file = std::make_unique<File>(path);
-	file->process();
-	// Automatically cleaned up when going out of scope.
-}
-
-// Good - RAII with standard containers.
-{
-	std::vector<int> data(1000);
-	// Automatically cleaned up.
-}
-
-// Avoid - manual resource management.
-{
-	int* buffer = new int[1000];
-	// ... easy to forget delete[] or miss it in exception paths.
-	delete[] buffer;
-}
-```
-
----
-
-## Control Flow
-
-### If-Else Statements
-Always use braces, even for single-line statements.
-
-**Keep the condition on a single line whenever possible** (up to ~120 characters):
-
-```cpp
-// Good - single-line condition.
-if (cursor[1] == '!' && cursor[2] == '[' && cursor[3] == 'C' && cursor[4] == 'D' && cursor[5] == 'A' && cursor[6] == 'T' && cursor[7] == 'A' && cursor[8] == '[')
-{
-	handleCDATA();
-}
-
-// Good - braces on all branches.
-if (condition)
-{
-	doSomething();
-}
-else if (anotherCondition)
-{
-	doSomethingElse();
-}
-else
-{
-	doDefault();
-}
-
-// Only break to multiple lines if truly exceeding 120 characters.
-if (veryLongVariableName > threshold && 
-	anotherVeryLongCondition == true &&
-	yetAnotherLongCondition != nullptr)
-{
-	// Complex condition that truly doesn't fit.
-}
-
-// Avoid - no braces (error-prone when adding more statements).
-if (condition)
-	doSomething();
-else
-	doSomethingElse();
-
-// Avoid - breaking short conditions unnecessarily.
-if (x > 5 &&
-	y < 10)
-{
-	// This is unnecessary - fits easily on one line.
-}
-```
-
-**Principle:** Keep conditions on one line unless they genuinely exceed ~120 characters. Don't break lines just for aesthetics.
-
-### Switch Statements
-Use explicit `break` statements and always include a `default` case.
-
-**Important: Only use braces within case blocks when declaring variables.**
-
-```cpp
-switch (mode)
-{
-	case ProcessingMode::Fast:
-		applyFastProcessing();
-		break;
-	
-	case ProcessingMode::Balanced:
-		// Multiple statements - no braces needed.
-		initializeBalanced();
-		applyBalancedProcessing();
-		logResult();
-		break;
-	
-	case ProcessingMode::Quality:
-	{
-		// Braces required - variable declaration needs scope.
-		std::string config = loadQualityConfig();
-		applyQualityProcessing(config);
-		break;
-	}
-	
-	default:
-		std::cerr << "Unknown processing mode" << std::endl;
-		break;
-}
-```
-
-**Avoid unnecessary braces:**
-
-```cpp
-// Bad - unnecessary braces around every case.
-switch (value)
-{
-	case 1:
-	{
-		doSomething();
-		break;
-	}
-	case 2:
-	{
-		doSomethingElse();
-		break;
-	}
-}
-
-// Good - braces only when needed for variable scope.
-switch (value)
-{
-	case 1:
-		doSomething();
-		break;
-	
-	case 2:
-		doSomethingElse();
-		break;
-	
-	case 3:
-	{
-		// Braces needed for variable declaration.
-		int tempValue = calculateValue();
-		processTempValue(tempValue);
-		break;
-	}
-}
-```
-
-**Fall-through cases:**
-
-When intentionally falling through, add a comment:
-
-```cpp
-switch (token.type)
-{
-	case XmlTokenType::LineBreak:
-		// Fall through.
-	case XmlTokenType::Whitespace:
-		handleWhitespace(token);
-		break;
-	
-	case XmlTokenType::Text:
-		handleText(token);
-		break;
-}
-```
-
-### Early Returns
-Prefer early returns to reduce nesting:
-
-```cpp
-// Good - early returns.
-void processData(const Data& data)
-{
-	if (!data.isValid())
-	{
-		std::cerr << "Invalid data" << std::endl;
-		return;
-	}
-	
-	if (data.isEmpty())
-	{
-		return;
-	}
-	
-	// Main processing logic at top level.
-	transformData(data);
-	saveResults();
-}
-
-// Avoid - deep nesting.
-void processData(const Data& data)
-{
-	if (data.isValid())
-	{
-		if (!data.isEmpty())
-		{
-			// Main logic deeply nested.
-			transformData(data);
-			saveResults();
-		}
-	}
-	else
-	{
-		std::cerr << "Invalid data" << std::endl;
-	}
-}
-```
-
----
-
-## STL Usage
-
-### Containers
-Choose appropriate containers:
-
-- `std::vector` - Dynamic array, default choice.
-- `std::array` - Fixed-size array (C++11).
-- `std::map` - Sorted key-value pairs.
-- `std::unordered_map` - Hash table, faster lookups.
-- `std::set` - Sorted unique elements.
-- `std::unordered_set` - Hash set.
-
-```cpp
-// Vector for dynamic collections.
-std::vector<std::string> files;
-files.push_back("file1.xml");
-
-// Array for fixed-size collections.
-std::array<int, 5> priorities = {1, 2, 3, 4, 5};
-
-// Map for key-value associations.
-std::map<std::string, int> settings;
-settings["quality"] = 85;
-
-// Set for unique elements.
-std::unordered_set<std::string> processedFiles;
-processedFiles.insert("file1.xml");
-```
-
-### Algorithms
-Use STL algorithms instead of manual loops when appropriate:
-
-```cpp
-#include <algorithm>
-
-std::vector<int> numbers = {5, 2, 8, 1, 9};
-
-// Sort.
-std::sort(numbers.begin(), numbers.end());
-
-// Find.
-auto it = std::find(numbers.begin(), numbers.end(), 8);
-if (it != numbers.end())
-{
-	std::cout << "Found: " << *it << std::endl;
-}
-
-// Transform.
-std::vector<int> doubled;
-std::transform(numbers.begin(), numbers.end(), std::back_inserter(doubled), [](int x) { return x * 2; });
-
-// Remove if.
-numbers.erase(std::remove_if(numbers.begin(), numbers.end(), [](int x) { return x < 5; }), numbers.end());
-
-// Count if.
-auto count = std::count_if(numbers.begin(), numbers.end(), [](int x) { return x > 5; });
 ```
 
 ---
 
 ## String Handling
 
-### String Operations
-Use `std::string` for strings:
+### std::string Basics
+Use `std::string` for all string operations:
 
 ```cpp
-std::string text = "Hello, World!";
-
-// Concatenation.
-std::string greeting = "Hello, " + name + "!";
+std::string text = "Hello World";
+std::string combined = text + " from C++";
 
 // Substring.
 std::string sub = text.substr(0, 5); // "Hello"
@@ -1232,37 +894,33 @@ std::string sub = text.substr(0, 5); // "Hello"
 size_t pos = text.find("World");
 if (pos != std::string::npos)
 {
-	std::cout << "Found at position: " << pos << std::endl;
+	// Found.
 }
 
 // Replace.
-text.replace(pos, 5, "C++");
+text.replace(0, 5, "Hi"); // "Hi World"
 ```
 
-### String Streams
-Use `std::stringstream` for string building and parsing:
+### String Formatting
+Use `std::to_string()` for conversions:
+
+```cpp
+int value = 42;
+std::string text = "The answer is " + std::to_string(value);
+
+double pi = 3.14159;
+std::string formatted = "Pi: " + std::to_string(pi);
+```
+
+For complex formatting, use `std::ostringstream`:
 
 ```cpp
 #include <sstream>
+#include <iomanip>
 
-// Building strings.
-std::stringstream ss;
-ss << "Processed: " << filename << " (" << reductionPct << "% reduction)";
-std::string message = ss.str();
-
-// Parsing strings.
-std::string data = "123 456 789";
-std::stringstream parser(data);
-int a, b, c;
-parser >> a >> b >> c;
-```
-
-### C-String Compatibility
-Use `.c_str()` when interfacing with C APIs:
-
-```cpp
-std::string filename = "output.xml";
-FILE* file = fopen(filename.c_str(), "w");
+std::ostringstream oss;
+oss << "Value: " << std::setw(10) << std::setfill('0') << 42;
+std::string result = oss.str(); // "Value: 0000000042"
 ```
 
 ---
@@ -1270,247 +928,367 @@ FILE* file = fopen(filename.c_str(), "w");
 ## Numeric Formatting
 
 ### Digit Separators (C++14)
-Use single quotes `'` as digit separators for large numbers:
+Use single quotes for digit separators:
 
 ```cpp
-constexpr size_t MAX_SIZE = 10'000'000;
-constexpr double PI = 3.141'592'653'589'793;
+int largeNumber = 1'000'000;
+long long veryLarge = 1'234'567'890;
+double precise = 3.141'592'653;
 
-if (length > 1'024'000)
-{
-	// Handle large file.
-}
+const size_t BUFFER_SIZE = 10'000'000;
 ```
 
-### Floating Point
-Specify precision when displaying floating-point numbers:
-
+### Hexadecimal and Binary
 ```cpp
-#include <iomanip>
-
-double value = 3.14159265;
-std::cout << std::fixed << std::setprecision(2) << value << std::endl; // Output: 3.14
+int hexValue = 0xFF'FF'FF; // Hex with separators.
+int binaryValue = 0b1111'0000; // Binary with separators (C++14).
 ```
 
 ---
 
-## Spacing and Blank Lines
+## STL Usage
 
-### Between Functions
-Use **one blank line** between function definitions:
+### Containers
 
+**std::vector - Dynamic array:**
 ```cpp
-void functionOne()
-{
-	// Implementation.
-}
-
-void functionTwo()
-{
-	// Implementation.
-}
-```
-
-### Within Functions
-Use blank lines to separate logical sections:
-
-```cpp
-void processData()
-{
-	// Section 1: Read data.
-	auto data = readFile(path);
-	size_t size = data.size();
-	
-	// Section 2: Process data.
-	auto processed = transform(data);
-	auto optimized = optimize(processed);
-	
-	// Section 3: Write results.
-	writeOutput(optimized);
-}
-```
-
-**Separate independent control flow blocks with blank lines:**
-
-Control structures (if/while/for) that are not directly related should be separated by blank lines for clarity.
-
-```cpp
-// Good - blank lines separate independent checks.
-if (p != std::string::npos)
-{
-	key = attr.key.substr(p + 1);
-}
-
-if (this->params.dumpIdAttributesName)
-{
-	out_attr << key << "=" << attr.val;
-}
-
-// Bad - blocks stuck together, hard to scan.
-if (p != std::string::npos)
-{
-	key = attr.key.substr(p + 1);
-}
-if (this->params.dumpIdAttributesName)
-{
-	out_attr << key << "=" << attr.val;
-}
-
-// Exception - related if/else blocks stay together (no blank lines).
-if (condition1)
-{
-	doSomething();
-}
-else if (condition2)
-{
-	doSomethingElse();
-}
-else
-{
-	doDefault();
-}
-
-// Exception - tightly coupled logic can stay together.
-int x = getValue();
-if (x > 10)
-{
-	processX(x);
-}
-```
-
-**When to add blank lines:**
-- Between independent if statements
-- Between independent loops
-- Between different types of control structures
-- Between control structures and regular statements (unless tightly coupled)
-
-**When NOT to add blank lines:**
-- Between if/else if/else chains
-- Between a variable declaration and its immediate use in a control structure
-- Within tightly related logic blocks
-
-### Around Class Sections
-Use blank lines to separate private/protected/public sections:
-
-```cpp
-class MyClass
-{
-private:
-	int privateData;
-	void privateMethod();
-
-public:
-	MyClass();
-	void publicMethod();
-};
-```
-
----
-
-## Anti-Patterns to Avoid
-
-### Don't Use C-Style Casts
-Use C++ casts (`static_cast`, `dynamic_cast`, `const_cast`, `reinterpret_cast`):
-
-**Avoid:**
-```cpp
-double x = (double)intValue; // C-style cast.
-```
-
-**Better:**
-```cpp
-double x = static_cast<double>(intValue); // C++ cast.
-```
-
-### Don't Use Naked `new`/`delete`
-Use smart pointers or containers:
-
-**Avoid:**
-```cpp
-int* buffer = new int[1000];
-// ... (easy to leak).
-delete[] buffer;
-```
-
-**Better:**
-```cpp
-std::vector<int> buffer(1000);
-// Or
-auto buffer = std::make_unique<int[]>(1000);
-```
-
-### Don't Ignore Return Values
-Always check return values from functions that can fail:
-
-**Avoid:**
-```cpp
-file.open(path); // Ignoring potential failure.
-```
-
-**Better:**
-```cpp
-file.open(path);
-if (!file.is_open())
-{
-	std::cerr << "Failed to open file" << std::endl;
-	return;
-}
-```
-
-### Don't Use `using namespace std;`
-Especially not in header files:
-
-**Avoid:**
-```cpp
-using namespace std;
-```
-
-**Better:**
-```cpp
-using std::string;
-using std::vector;
-
-// Or just use std:: prefix.
-std::string text;
 std::vector<int> numbers;
+numbers.reserve(1000); // Pre-allocate to avoid reallocations.
+
+numbers.push_back(42);
+numbers.push_back(17);
+
+for (const int& num : numbers)
+{
+	std::cout << num << std::endl;
+}
 ```
 
-### Don't Write Overly Nested Code
-Extract complex logic into separate functions:
-
-**Avoid:**
+**std::string - String container:**
 ```cpp
-if (condition1)
+std::string text = "Hello";
+text += " World";
+```
+
+**std::map - Ordered key-value pairs:**
+```cpp
+std::map<std::string, int> ages;
+ages["Alice"] = 30;
+ages["Bob"] = 25;
+
+for (const auto& [name, age] : ages)
 {
-	if (condition2)
+	std::cout << name << ": " << age << std::endl;
+}
+```
+
+**std::unordered_map - Hash table:**
+```cpp
+std::unordered_map<std::string, int> counts;
+counts["apple"] = 5;
+counts["banana"] = 3;
+```
+
+**std::set - Unique sorted elements:**
+```cpp
+std::set<int> uniqueNumbers;
+uniqueNumbers.insert(42);
+uniqueNumbers.insert(17);
+uniqueNumbers.insert(42); // Ignored - already exists.
+```
+
+### Algorithms
+
+**Prefer explicit loops when control flow or allocation matters.**
+
+**Prefer algorithms when they express intent more clearly and safely.**
+
+```cpp
+#include <algorithm>
+
+std::vector<int> numbers = {5, 2, 8, 1, 9};
+
+// Good - sorting is obvious and optimal.
+std::sort(numbers.begin(), numbers.end());
+
+// Good - simple search, clear intent.
+std::vector<int>::iterator it = std::find(numbers.begin(), numbers.end(), 8);
+if (it != numbers.end())
+{
+	std::cout << "Found: " << *it << std::endl;
+}
+
+// Good - erase_if is clearer and safer than manual erase loop.
+std::vector<Player> players;
+std::erase_if(players, [](const Player& p) { return p.health <= 0; });
+
+// AVOID - transform hides iteration and control flow.
+// std::transform(numbers.begin(), numbers.end(), doubled.begin(), [](int n) { return n * 2; });
+
+// PREFER - explicit loop shows control flow and allocation.
+std::vector<int> doubled;
+doubled.reserve(numbers.size());
+
+for (const int& n : numbers)
+{
+	doubled.push_back(n * 2);
+}
+```
+
+**Guideline:** Use algorithms for operations where the algorithm is:
+- Well-known and idiomatic (`sort`, `find`, `erase_if`, `unique`)
+- Safer than manual implementation (iterator invalidation, off-by-one errors)
+- Not hiding significant allocation or branching complexity
+
+Use explicit loops when you need to see:
+- Control flow
+- Allocation points
+- Branching logic
+- Performance characteristics
+
+### Iterators
+```cpp
+std::vector<std::string> files = {"file1.txt", "file2.txt", "file3.txt"};
+
+// Forward iteration.
+for (std::vector<std::string>::iterator it = files.begin(); it != files.end(); ++it)
+{
+	std::cout << *it << std::endl;
+}
+
+// Const iterator.
+for (std::vector<std::string>::const_iterator it = files.cbegin(); it != files.cend(); ++it)
+{
+	std::cout << *it << std::endl;
+}
+
+// Reverse iteration.
+for (std::vector<std::string>::reverse_iterator it = files.rbegin(); it != files.rend(); ++it)
+{
+	std::cout << *it << std::endl;
+}
+```
+
+---
+
+## Modern C++ Features
+
+### Smart Pointers
+**Never use raw pointers for ownership.**
+
+```cpp
+// WRONG - naked new/delete.
+XmlParser* parser = new XmlParser(data, length);
+// ... easy to leak.
+delete parser;
+
+// CORRECT - smart pointers.
+std::unique_ptr<XmlParser> parser = std::make_unique<XmlParser>(data, length);
+// Automatically cleaned up.
+
+std::shared_ptr<XmlFormatter> formatter = std::make_shared<XmlFormatter>(data, length);
+// Reference counted, cleaned up when last reference goes away.
+```
+
+### Range-Based For Loops
+Use when iterating collections:
+
+```cpp
+std::vector<std::string> files = getFiles();
+
+for (const std::string& file : files)
+{
+	process(file);
+}
+
+// Modifying elements.
+for (std::string& file : files)
+{
+	file = normalize(file);
+}
+```
+
+### std::optional (C++17)
+Use for values that may not exist:
+
+```cpp
+std::optional<std::string> findFile(const std::string& name)
+{
+	if (fileExists(name))
 	{
-		if (condition3)
-		{
-			// Deeply nested logic.
-		}
+		return name;
+	}
+	return std::nullopt;
+}
+
+// Usage.
+if (std::optional<std::string> file = findFile("config.xml"))
+{
+	std::cout << "Found: " << *file << std::endl;
+}
+```
+
+### std::filesystem (C++17)
+Use for file operations:
+
+```cpp
+#include <filesystem>
+
+namespace fs = std::filesystem;
+
+for (const fs::directory_entry& entry : fs::directory_iterator(dirPath))
+{
+	if (entry.is_regular_file())
+	{
+		std::cout << entry.path() << std::endl;
 	}
 }
 ```
 
-**Better:**
+### Lambdas
 ```cpp
-if (!condition1)
-{
-	return;
-}
+// Simple lambda.
+std::vector<int>::iterator it = std::find_if(numbers.begin(), numbers.end(), [](int n) { return n > 10; });
 
-if (!condition2)
-{
-	return;
-}
+// Lambda with capture.
+int threshold = 10;
+std::vector<int>::iterator it2 = std::find_if(numbers.begin(), numbers.end(), [threshold](int n) { return n > threshold; });
 
-if (!condition3)
-{
-	return;
-}
-
-// Main logic at top level.
+// Lambda with explicit return type - prefer auto.
+auto add = [](int a, int b) -> int { return a + b; };
 ```
+
+**Avoid std::function in performance-sensitive code:**
+
+```cpp
+// BAD - type erasure, heap allocation, virtual dispatch.
+std::function<int(int, int)> add = [](int a, int b) { return a + b; };
+
+// GOOD - zero-cost, no type erasure.
+auto add = [](int a, int b) { return a + b; };
+
+// Or use templates for function parameters.
+template<typename Func>
+void process(Func callback)
+{
+	callback();
+}
+```
+
+**Why?** `std::function` introduces heap allocation and virtual dispatch, violating predictable performance.
+
+---
+
+## Data-Oriented Design
+
+**Memory layout and cache behavior matter more than syntax.**
+
+### Prefer Contiguous Memory
+
+Use `std::vector`, arrays, and `std::span`. Avoid deep object graphs and pointer chasing.
+
+```cpp
+// CORRECT - Contiguous memory, cache-friendly.
+struct PlayerData
+{
+	std::vector<Position> positions;
+	std::vector<int> healths;
+	std::vector<uint8_t> levels;
+};
+
+// WRONG - Pointer-heavy, cache-hostile.
+struct Player
+{
+	std::unique_ptr<Position> position;
+	std::unique_ptr<std::vector<Item>> inventory;
+	std::unique_ptr<Stats> stats;
+};
+```
+
+### Flat Data Structures
+
+Avoid excessive indirection and nesting.
+
+```cpp
+// CORRECT - Flat, direct access.
+struct GameState
+{
+	std::vector<Player> players;
+	std::vector<Npc> npcs;
+	std::vector<Item> items;
+};
+
+// WRONG - Deep nesting.
+struct GameState
+{
+	std::unique_ptr<World> world;
+};
+
+struct World
+{
+	std::vector<std::unique_ptr<Zone>> zones;
+};
+
+struct Zone
+{
+	std::vector<std::unique_ptr<Entity>> entities;
+};
+```
+
+### SoA vs AoS in Hot Paths
+
+For hot loops iterating a single field, consider Structure of Arrays.
+
+```cpp
+// AoS - good for general access.
+struct Player
+{
+	float x;
+	float y;
+	int health;
+	uint8_t level;
+};
+
+std::vector<Player> players;
+
+// SoA - better for hot loops accessing one field.
+struct Players
+{
+	std::vector<float> xs;
+	std::vector<float> ys;
+	std::vector<int> healths;
+	std::vector<uint8_t> levels;
+};
+
+// Hot loop only needs positions - SoA wins.
+for (size_t i = 0; i < players.xs.size(); i++)
+{
+	updatePosition(players.xs[i], players.ys[i]);
+}
+```
+
+### Avoid Heap Allocation in Loops
+
+Pre-allocate outside loops. Reuse buffers.
+
+```cpp
+// WRONG - allocates every iteration.
+for (const std::string& file : files)
+{
+	std::vector<uint8_t> buffer(1024); // Bad.
+	process(file, buffer);
+}
+
+// CORRECT - allocate once.
+std::vector<uint8_t> buffer(1024);
+
+for (const std::string& file : files)
+{
+	process(file, buffer);
+}
+```
+
+**This grounds all other rules:** Smart pointers for ownership only, explicit loops, no algorithm pipelines—all serve cache-friendly, contiguous, predictable memory access.
 
 ---
 
@@ -1529,13 +1307,7 @@ void process(const std::string& text, const std::vector<int>& data)
 // Avoid - pass by value (unnecessary copy).
 void process(std::string text, std::vector<int> data)
 {
-	// Makes copies of text and data.
-}
-
-// Note: For small types (int, double, etc.), pass by value is fine.
-void calculate(int x, double y)
-{
-	// Passing fundamental types by value is efficient.
+	// Copies made on every call.
 }
 ```
 
@@ -1570,43 +1342,192 @@ for (int i = 0; i < 1000; ++i)
 }
 ```
 
+### Avoid Unnecessary Allocations
+```cpp
+// Bad - string created on every iteration.
+for (int i = 0; i < 1000; ++i)
+{
+	std::string temp = "prefix_" + std::to_string(i);
+	process(temp);
+}
+
+// Good - reuse string.
+std::string temp;
+for (int i = 0; i < 1000; ++i)
+{
+	temp = "prefix_" + std::to_string(i);
+	process(temp);
+}
+```
+
+---
+
+## Anti-Patterns to Avoid
+
+### ❌ Don't Use `auto` When Type Is Unclear
+```cpp
+// WRONG - unclear return type.
+auto result = calculateValue(x, y, z);
+
+// CORRECT - explicit type.
+int result = calculateValue(x, y, z);
+
+// ALLOWED - obvious constructor.
+auto buffer = std::vector<uint8_t>(1024);
+```
+
+### ❌ Don't Declare Multiple Variables on Same Line
+```cpp
+// WRONG - confusing, unclear initialization.
+int a, b = 0;
+int x = 1, y = 2, z;
+
+// CORRECT - one per line.
+int a = 0;
+int b = 0;
+int x = 1;
+int y = 2;
+int z = 0;
+```
+
+### ❌ Don't Over-Engineer - Avoid Single-Use Abstractions
+```cpp
+// WRONG - helper function called only once, no domain meaning.
+void printSeparator()
+{
+	std::cout << "---" << std::endl;
+}
+
+// CORRECT - inline it.
+std::cout << "---" << std::endl;
+
+// WRONG - pointless wrapper.
+const int THREE = 3;
+if (priority == THREE)
+
+// CORRECT - use the value directly.
+if (priority == 3)
+```
+
+**Exception:** Create abstractions when:
+- Used multiple times
+- Encode domain meaning (e.g., `const int MAX_PLAYERS = 100;`)
+- Improve clarity significantly
+- Likely to change
+
+Single-use constants with domain meaning are allowed:
+
+### ❌ Don't Use C-Style Casts
+```cpp
+// WRONG - C-style cast.
+double x = (double)intValue;
+
+// CORRECT - C++ cast.
+double x = static_cast<double>(intValue);
+```
+
+### ❌ Don't Use Naked new/delete
+```cpp
+// WRONG - manual memory management.
+int* buffer = new int[1000];
+// ... easy to leak.
+delete[] buffer;
+
+// CORRECT - use containers or smart pointers.
+std::vector<int> buffer(1000);
+// Or
+std::unique_ptr<int[]> buffer = std::make_unique<int[]>(1000);
+```
+
+### ❌ Don't Use `using namespace std;`
+```cpp
+// WRONG - pollutes global namespace.
+using namespace std;
+
+// CORRECT - be explicit.
+std::string text;
+std::vector<int> numbers;
+
+// OK - specific using declarations in limited scope.
+using std::string;
+using std::vector;
+```
+
+### ❌ Don't Write Deeply Nested Code
+```cpp
+// WRONG - deeply nested.
+if (condition1)
+{
+	if (condition2)
+	{
+		if (condition3)
+		{
+			// Too deep.
+		}
+	}
+}
+
+// CORRECT - early returns.
+if (!condition1)
+{
+	return;
+}
+
+if (!condition2)
+{
+	return;
+}
+
+if (!condition3)
+{
+	return;
+}
+
+// Main logic at top level.
+```
+
 ---
 
 ## Quick Reference Checklist
 
-When writing or reviewing code, ensure:
+Before submitting code, verify:
 
-- [ ] Using tabs for indentation.
-- [ ] Opening braces on new lines for functions, classes, control structures.
-- [ ] Keep conditions and statements on single lines when they fit (≤120 chars).
-- [ ] Keep constructor initialization lists on single lines when they fit.
-- [ ] Only break lines when genuinely needed for readability or length.
-- [ ] Comments start with capital letter and end with period.
-- [ ] Using camelCase for variables/functions/members.
-- [ ] Using PascalCase for classes/structs/enums.
-- [ ] Using SCREAMING_SNAKE_CASE for constants/macros.
-- [ ] Using `#pragma once` for header guards.
-- [ ] Include order: corresponding header, std, third-party, project.
-- [ ] Using const correctness (const parameters, const member functions).
-- [ ] Using smart pointers instead of raw pointers for ownership.
-- [ ] Using RAII for resource management.
-- [ ] Proper error handling with exceptions or error codes.
-- [ ] One blank line between functions.
-- [ ] Blank lines to separate logical sections.
-- [ ] Blank lines between independent control flow blocks (if/while/for).
-- [ ] Switch case braces only when declaring variables.
-- [ ] Using modern C++ features (auto, range-for, lambdas, std::optional, std::filesystem).
-- [ ] Avoiding C-style casts, naked new/delete, `using namespace std;`.
+- [ ] **Controlled `auto` use** - only when type is obvious from RHS
+- [ ] **Explicit types when unclear** - I can see what every variable is without jumping to definitions
+- [ ] **Data-oriented design** - contiguous memory, flat structures, no deep nesting
+- [ ] **Algorithms vs loops** - prefer loops for control flow, algorithms for clear intent
+- [ ] **Avoid std::function** - in performance-sensitive code
+- [ ] **Single-line code** - all control flow, conditions, signatures, and constructor initialization lists on single lines (no wrapping)
+- [ ] **Allman braces** - opening `{` on new line
+- [ ] **Tabs for indentation** - not spaces
+- [ ] **Complete sentences in comments** - capital letter, period
+- [ ] **camelCase** for variables/functions/members
+- [ ] **PascalCase** for classes/structs/enums
+- [ ] **SCREAMING_SNAKE_CASE** for constants/macros
+- [ ] **One blank line** between functions
+- [ ] **Never more than one blank line** anywhere
+- [ ] **No trailing spaces**
+- [ ] **One variable per line** - no `int a, b;`
+- [ ] **Switch for 3+ cases** - if/else for 1-2
+- [ ] **Smart pointers** instead of raw pointers for ownership
+- [ ] **RAII** for resource management
+- [ ] **const correctness** everywhere applicable
+- [ ] **#pragma once** for header guards
+- [ ] **Include order** correct (corresponding, std, third-party, project)
+- [ ] **Reserve capacity** for vectors when size known
 
 ---
 
 ## Summary
 
-The C++ coding style emphasizes:
-1. **Readability** - Code should be self-documenting and easy to understand.
-2. **Consistency** - Use the same patterns throughout the codebase.
-3. **Modern C++** - Embrace C++17/20 features for safer, more expressive code.
-4. **RAII** - Resource acquisition is initialization; let destructors clean up.
-5. **Const Correctness** - Use const wherever possible to express intent.
-6. **Smart Pointers** - Prefer smart pointers over raw pointers for ownership.
-7. **Maintainability** - Write code that's easy to modify and debug.
+Remember these core principles:
+
+1. **Data-Oriented** - Contiguous memory, flat structures, cache-friendly access patterns.
+2. **Balanced Control Flow** - Prefer explicit loops for control flow visibility; use algorithms when they're genuinely clearer and safer.
+3. **Controlled Type Inference** - Use `auto` only when type is obvious from RHS.
+4. **Single-Line Code** - All control flow, conditions, signatures, and constructor initialization lists on single lines. Wrapping hides complexity instead of reducing it.
+5. **Allman Braces** - Opening braces on new lines always.
+6. **Complete Sentences** - Comments are documentation.
+7. **Don't Over-Engineer** - YAGNI (You Ain't Gonna Need It).
+8. **Modern C++ for Ownership** - Smart pointers, RAII, move semantics.
+9. **Performance** - Pass by reference, reserve capacity, avoid allocations in loops.
