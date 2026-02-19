@@ -176,6 +176,13 @@ std::string XmlIndenter::indentXML()
 		processedContent = processedContent.substr(startIndex);
 	}
 
+	// Remove all content after the last > character.
+	size_t endIndex = processedContent.rfind('>');
+	if (endIndex != std::string::npos && endIndex < processedContent.length() - 1)
+	{
+		processedContent = processedContent.substr(0, endIndex + 1);
+	}
+
 	// Replace Mac line endings (\r) with Windows line endings (\r\n).
 	// This more closely follows the C# code's regex approach.
 	processedContent = normalizeLineEndings(processedContent);
